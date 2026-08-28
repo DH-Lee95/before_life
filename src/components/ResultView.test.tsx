@@ -3,8 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ResultView } from "./ResultView";
 
+const routerPush = vi.hoisted(() => vi.fn());
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
+
 describe("ResultView", () => {
   beforeEach(() => {
+    routerPush.mockReset();
     sessionStorage.clear();
     window.history.replaceState(null, "", "/");
     vi.stubGlobal(
@@ -23,6 +27,11 @@ describe("ResultView", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
+        if (String(input).includes("/api/payment/intents")) {
+          return Promise.resolve(new Response(JSON.stringify({ orderId: "soul_order" }), {
+            status: 201, headers: { "Content-Type": "application/json" },
+          }));
+        }
         if (String(input).includes("/api/soul/story-preview")) {
           return Promise.resolve(new Response(JSON.stringify({
             cached: false,
@@ -154,6 +163,15 @@ describe("ResultView", () => {
     expect(screen.getByText("7소울")).toBeInTheDocument();
     expect(screen.getByText("친구 한 명을 초대하면 1소울")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /결과 공유/ })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /3소울/ }));
+    await screen.findByText("결제 준비 중…");
+    expect(fetch).toHaveBeenCalledWith("/api/payment/intents", expect.objectContaining({
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Result-Token": "shared_token" },
+      body: JSON.stringify({ profileId: "sp_test", packId: "soul_3" }),
+    }));
+    expect(routerPush).toHaveBeenCalledWith("/payment/checkout?orderId=soul_order");
 
     const freeRecordLabel = screen.getByText("가장 선명한 기록 · 무료 공개");
     const wholeLifeOffer = screen.getByText("한 사람의 생애로 읽는 전생");

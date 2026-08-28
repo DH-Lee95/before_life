@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
 
 import { contentCosts, referralReward, soulPacks } from "@/config/pricing";
@@ -38,11 +39,13 @@ function cleanLegacyTokenFromAddress(profileId: string) {
 }
 
 export function ResultView({ profileId, token: legacyToken = "" }: ResultViewProps) {
+  const router = useRouter();
   const [payload, setPayload] = useState<ResultPayload | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [shareMessage, setShareMessage] = useState("");
-  const [purchaseMessage, setPurchaseMessage] = useState(false);
+  const [purchaseMessage, setPurchaseMessage] = useState("");
+  const [purchasingPackId, setPurchasingPackId] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const [wholeLifePreview, setWholeLifePreview] = useState<WholeLifeNarrative | null>(null);
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -132,9 +135,31 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   }
 
   function showPurchase(contentType?: string) {
-    setPurchaseMessage(true);
+    setPurchaseMessage("원하는 소울 묶음을 선택해 결제를 진행해주세요.");
     trackEvent(contentType ? "click_locked_content" : "view_payment", profileId, contentType);
     document.getElementById("deep-archive-offer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function purchasePack(packId: string) {
+    try {
+      setPurchasingPackId(packId);
+      setPurchaseMessage("결제 준비 중…");
+      const resultToken = getResultToken(profileId, legacyToken);
+      const response = await fetch("/api/payment/intents", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(resultToken ? { "X-Result-Token": resultToken } : {}),
+        },
+        body: JSON.stringify({ profileId, packId }),
+      });
+      const data = await response.json() as { orderId?: string; message?: string };
+      if (!response.ok || !data.orderId) throw new Error(data.message ?? "결제를 준비하지 못했습니다.");
+      router.push(`/payment/checkout?orderId=${encodeURIComponent(data.orderId)}`);
+    } catch (error) {
+      setPurchasingPackId("");
+      setPurchaseMessage(error instanceof Error ? error.message : "결제를 준비하지 못했습니다.");
+    }
   }
 
   async function shareInvitation() {
@@ -285,7 +310,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         <p className="mt-2 text-sm leading-6 text-archive-bg/70">깊은 기록은 1소울, 시간순으로 이어지는 전생의 일생은 2소울이 필요합니다.</p>
         <div className="mt-5 grid grid-cols-2 gap-3">
           {soulPacks.map((pack) => (
-            <button key={pack.id} type="button" onClick={() => showPurchase(pack.id)} className={`relative rounded-lg border p-4 text-left ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}>
+            <button key={pack.id} type="button" disabled={Boolean(purchasingPackId)} onClick={() => void purchasePack(pack.id)} className={`relative rounded-lg border p-4 text-left disabled:cursor-wait disabled:opacity-60 ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}>
               {pack.badge ? <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pack.souls === 7 ? "bg-archive-rose/15 text-archive-rose" : "bg-archive-bg/10 text-archive-card"}`}>{pack.badge}</span> : null}
               <strong className="block text-lg">{pack.souls}소울</strong>
               <span className={`mt-1 block text-sm ${pack.souls === 7 ? "text-archive-body" : "text-archive-bg/65"}`}>{pack.priceKrw.toLocaleString("ko-KR")}원</span>
@@ -293,7 +318,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
             </button>
           ))}
         </div>
-        {purchaseMessage ? <p className="mt-4 text-xs leading-5 text-archive-bg/65" aria-live="polite">지금은 상품 구성을 확인하는 체험 모드입니다. 실제 결제와 소울 차감은 계정·결제 연동 후 서버에서 처리됩니다.</p> : null}
+        {purchaseMessage ? <p className="mt-4 text-xs leading-5 text-archive-bg/65" aria-live="polite">{purchaseMessage}</p> : null}
       </section>
 
       <section className="rounded-xl border border-archive-line bg-archive-panel p-5">

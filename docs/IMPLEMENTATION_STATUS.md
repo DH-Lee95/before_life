@@ -24,6 +24,8 @@
 - 익명 세션 cookie
 - 긴 `result_token` 또는 익명 세션 소유권 기반 결과 조회
 - 결과 토큰의 query URL 노출 제거와 header 기반 공유 조회
+- Toss Payments 결제위젯 기반 소울 충전 주문·승인 UI/API
+- 서버 가격 검증, 승인 멱등성, payment transaction·soul ledger 원장
 - 작성 중 답변 `sessionStorage` 복구
 - 결과 API 공개 DTO와 analytics 입력 검증
 - analytics event 수집용 API
