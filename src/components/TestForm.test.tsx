@@ -15,7 +15,7 @@ describe("TestForm", () => {
   it("renders the first step fields", () => {
     render(<TestForm />);
 
-    expect(screen.getByLabelText("닉네임")).toBeInTheDocument();
+    expect(screen.getByLabelText("이름")).toBeInTheDocument();
     expect(screen.getByLabelText("생년월일")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "모름" })).toHaveAttribute("aria-pressed", "true");
   });
@@ -47,7 +47,7 @@ describe("TestForm", () => {
 
   it("exposes the selected answer state to users and assistive technology", () => {
     render(<TestForm />);
-    fireEvent.change(screen.getByLabelText("닉네임"), { target: { value: "서연" } });
+    fireEvent.change(screen.getByLabelText("이름"), { target: { value: "서연" } });
     fireEvent.change(screen.getByLabelText("생년월일"), { target: { value: "1994-11-18" } });
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
 
@@ -62,7 +62,7 @@ describe("TestForm", () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ profileId: "sp_test", resultToken: "token" }), { status: 200 })));
     render(<TestForm />);
 
-    fireEvent.change(screen.getByLabelText("닉네임"), { target: { value: "서연" } });
+    fireEvent.change(screen.getByLabelText("이름"), { target: { value: "서연" } });
     fireEvent.change(screen.getByLabelText("생년월일"), { target: { value: "1994-11-18" } });
     fireEvent.click(screen.getByRole("button", { name: "다음" }));
 

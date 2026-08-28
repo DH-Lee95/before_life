@@ -128,13 +128,13 @@ export function TestForm() {
           </div>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium">닉네임</span>
+            <span className="mb-2 block text-sm font-medium">이름</span>
             <input
               value={nickname}
               onChange={(event) => dispatch({ type: "set_field", field: "nickname", value: event.target.value })}
               className="h-12 w-full rounded-lg border border-archive-line bg-archive-panel px-4 text-sm outline-none focus:border-archive-rose"
               placeholder="예: 서연"
-              autoComplete="nickname"
+              autoComplete="name"
             />
           </label>
 
