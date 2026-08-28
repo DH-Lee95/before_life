@@ -17,6 +17,21 @@ describe("TestForm", () => {
 
     expect(screen.getByLabelText("닉네임")).toBeInTheDocument();
     expect(screen.getByLabelText("생년월일")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "모름" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("lets users explicitly choose an unknown birth time", () => {
+    render(<TestForm />);
+
+    const birthTime = screen.getByLabelText("출생시간 선택");
+    const unknown = screen.getByRole("button", { name: "모름" });
+
+    fireEvent.change(birthTime, { target: { value: "09:30" } });
+    expect(unknown).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(unknown);
+    expect(birthTime).toHaveValue("");
+    expect(unknown).toHaveAttribute("aria-pressed", "true");
   });
 
   it("restores an unfinished questionnaire from session storage", async () => {

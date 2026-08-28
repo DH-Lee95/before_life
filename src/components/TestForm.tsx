@@ -149,15 +149,32 @@ export function TestForm() {
             />
           </label>
 
-          <label className="block">
-            <span className="mb-2 block text-sm font-medium">출생시간 선택</span>
-            <input
-              value={birthTime}
-              onChange={(event) => dispatch({ type: "set_field", field: "birthTime", value: event.target.value })}
-              className="h-12 w-full rounded-lg border border-archive-line bg-archive-panel px-4 text-sm outline-none focus:border-archive-rose"
-              type="time"
-            />
-          </label>
+          <div>
+            <label htmlFor="birth-time" className="mb-2 block text-sm font-medium">출생시간 선택</label>
+            <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+              <input
+                id="birth-time"
+                value={birthTime}
+                onChange={(event) => dispatch({ type: "set_field", field: "birthTime", value: event.target.value })}
+                className="h-12 w-full rounded-lg border border-archive-line bg-archive-panel px-4 text-sm outline-none focus:border-archive-rose"
+                type="time"
+              />
+              <button
+                type="button"
+                aria-pressed={!birthTime}
+                onClick={() => dispatch({ type: "set_field", field: "birthTime", value: "" })}
+                className={`flex h-12 items-center justify-center gap-1.5 rounded-lg border text-sm transition ${
+                  !birthTime
+                    ? "border-archive-rose bg-archive-card text-archive-text"
+                    : "border-archive-line bg-archive-panel text-archive-body"
+                }`}
+              >
+                {!birthTime ? <Check className="h-4 w-4 text-archive-rose" aria-hidden /> : null}
+                모름
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-archive-muted">시간을 모르면 결과에 ‘모름’으로 반영됩니다.</p>
+          </div>
         </section>
       ) : (
         <section className="space-y-5">
