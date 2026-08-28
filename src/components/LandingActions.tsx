@@ -12,7 +12,11 @@ export function LandingActions() {
   useEffect(() => {
     const saved = sessionStorage.getItem("soul:last-result");
     const safePath = getSafeResultPath(saved);
-    if (safePath !== "/") setLastResult(safePath);
+    if (safePath !== "/") {
+      migrateLegacyResultToken(saved, safePath);
+      sessionStorage.setItem("soul:last-result", safePath);
+      setLastResult(safePath);
+    }
 
     void fetch("/api/analytics", {
       method: "POST",
@@ -50,4 +54,14 @@ export function LandingActions() {
       ) : null}
     </div>
   );
+}
+
+function migrateLegacyResultToken(saved: string | null, safePath: string) {
+  if (!saved) return;
+
+  const token = new URL(saved, "https://local.invalid").searchParams.get("token");
+  const profileId = safePath.split("/").at(-1);
+  if (profileId && token && /^[A-Za-z0-9_-]{1,128}$/.test(token)) {
+    sessionStorage.setItem(`soul:result-token:${profileId}`, token);
+  }
 }

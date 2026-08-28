@@ -84,21 +84,19 @@ anonymous_session_id
 - 결과 페이지 URL에는 짧은 Soul ID만 쓰지 않는다.
 - 결과 조회에는 `result_token` 또는 세션 소유권 확인이 필요하다.
 - `result_token`은 충분히 긴 random opaque token으로 만든다.
-- `result_token`은 DB에 hash로 저장하고 원문은 URL 또는 httpOnly cookie에만 둔다.
+- `result_token`은 DB에 hash로 저장하고 원문은 클라이언트 세션 저장소에 보관한다.
 
 권장 URL:
 
 ```text
-/result/{profileId}?token={resultToken}
+/result/{profileId}#token={resultToken}
 ```
 
-또는:
+수신 클라이언트는 fragment의 토큰을 API request header로 전달하고, 인증 성공 후 주소에서 fragment를 제거한다. 자신의 결과는 익명 세션 cookie로 다음 주소에 접근한다.
 
 ```text
 /result/{profileId}
 ```
-
-이 경우 token은 httpOnly cookie에 보관한다.
 
 금지:
 

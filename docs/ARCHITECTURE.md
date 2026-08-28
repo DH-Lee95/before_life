@@ -26,7 +26,7 @@ src/
 → deterministic SoulProfile 생성
 → repository에서 기존 profile/content 조회 또는 생성
 → result_token 발급
-→ /result/{profileId}?token={resultToken}
+→ 토큰은 sessionStorage에 보관하고 /result/{profileId}로 이동
 → GET /api/soul/result/{profileId}
 → 대표 전생과 추천 무료 기록 1개, 잠긴 기록 미리보기 5개, 잠긴 일생 미리보기 표시
 ```
@@ -38,6 +38,7 @@ src/
 - Content provider abstraction: Phase 1은 deterministic local writer, OpenAI 연동은 provider 교체로 붙인다.
 - Idempotent creation: `soul_hash + input_version + engine_version` 기준으로 profile을 재사용한다.
 - Cost-aware content generation: 생년월일 기반 성향 요약과 전생 핵심 설정은 서버 순수 함수와 config pool에서 만든다. LLM에는 압축된 설정만 전달하고 생성된 장문 스토리는 캐시한다.
+- Result access: 일반 이동은 익명 세션 소유권으로 조회한다. 공유 토큰은 URL fragment로 전달해 서버 요청 로그에 남지 않게 하고 API header로 검증한 뒤 주소에서 즉시 제거한다. 기존 query token 링크는 호환을 위해 조회만 지원한다.
 
 ## 생년월일 기반 성향 요약 전략
 첫 결과는 바로 전생을 제시하지 않고, 다음 구조로 신뢰를 만든다.

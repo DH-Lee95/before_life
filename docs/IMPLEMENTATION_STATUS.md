@@ -7,9 +7,9 @@
 - 모바일 우선 랜딩 페이지: `/`
 - 무료 테스트 페이지: `/test`
 - 분석 중 페이지: `/analyzing`
-- 결과 페이지: `/result/[profileId]?token=...`
+- 결과 페이지: `/result/[profileId]` (공유 토큰은 서버에 전송되지 않는 fragment 사용)
 - 7개 비유도형 질문 config
-- 닉네임, 양력 생년월일, 선택 출생시간 입력
+- 이름, 양력 생년월일, 선택 출생시간/모름 입력
 - 입력 정규화와 Unicode normalization
 - SHA-256 기반 `soul_hash`와 표시용 `displaySoulId`
 - deterministic Soul Engine
@@ -23,6 +23,7 @@
 - 사랑, 마지막 날, 재산, 업보, 현생 영향, 두 번째 전생의 무료 심화 기록
 - 익명 세션 cookie
 - 긴 `result_token` 또는 익명 세션 소유권 기반 결과 조회
+- 결과 토큰의 query URL 노출 제거와 header 기반 공유 조회
 - 작성 중 답변 `sessionStorage` 복구
 - 결과 API 공개 DTO와 analytics 입력 검증
 - analytics event 수집용 API

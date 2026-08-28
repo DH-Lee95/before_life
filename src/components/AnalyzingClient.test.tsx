@@ -5,7 +5,7 @@ import { AnalyzingClient, getSafeResultPath } from "./AnalyzingClient";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn() }),
-  useSearchParams: () => new URLSearchParams("next=%2Fresult%2Fsp_test%3Ftoken%3Dabc"),
+  useSearchParams: () => new URLSearchParams("next=%2Fresult%2Fsp_test"),
 }));
 
 describe("AnalyzingClient", () => {
@@ -16,7 +16,9 @@ describe("AnalyzingClient", () => {
   });
 
   it("only accepts an internal result path", () => {
-    expect(getSafeResultPath("/result/sp_test?token=abc")).toBe("/result/sp_test?token=abc");
+    expect(getSafeResultPath("/result/sp_test")).toBe("/result/sp_test");
+    expect(getSafeResultPath("/result/sp_test?token=abc")).toBe("/result/sp_test");
+    expect(getSafeResultPath("/result/sp_test?other=value")).toBe("/");
     expect(getSafeResultPath("javascript:alert(1)")).toBe("/");
     expect(getSafeResultPath("https://example.com/result/sp_test?token=abc")).toBe("/");
     expect(getSafeResultPath("//example.com/result/sp_test?token=abc")).toBe("/");

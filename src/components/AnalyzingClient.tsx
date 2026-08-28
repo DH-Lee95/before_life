@@ -38,8 +38,11 @@ export function getSafeResultPath(value: string | null): string {
 
   try {
     const url = new URL(value, "https://local.invalid");
-    if (url.origin !== "https://local.invalid" || !url.searchParams.get("token")) return "/";
-    return `${url.pathname}${url.search}`;
+    const isResultPath = /^\/result\/[A-Za-z0-9_-]+$/.test(url.pathname);
+    const queryKeys = [...url.searchParams.keys()];
+    const isCleanOrLegacyToken = queryKeys.length === 0 || (queryKeys.length === 1 && queryKeys[0] === "token");
+    if (url.origin !== "https://local.invalid" || !isResultPath || !isCleanOrLegacyToken || url.hash) return "/";
+    return url.pathname;
   } catch {
     return "/";
   }

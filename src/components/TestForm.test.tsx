@@ -71,7 +71,10 @@ describe("TestForm", () => {
       fireEvent.click(screen.getByRole("button", { name: step === 6 ? "결과 보기" : "다음" }));
     }
 
-    await waitFor(() => expect(routerPush).toHaveBeenCalledWith(expect.stringContaining("/analyzing?next=")));
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith("/analyzing?next=%2Fresult%2Fsp_test"));
+    expect(sessionStorage.getItem("soul:last-result")).toBe("/result/sp_test");
+    expect(sessionStorage.getItem("soul:result-token:sp_test")).toBe("token");
+    expect(routerPush.mock.calls[0]?.[0]).not.toContain("token");
     const createCall = vi.mocked(fetch).mock.calls.find(([url]) => url === "/api/soul/create");
     expect(JSON.parse(String(createCall?.[1]?.body))).not.toHaveProperty("birthTime");
   });

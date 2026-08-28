@@ -14,7 +14,7 @@ type RouteContext = {
 
 export async function GET(request: Request, context: RouteContext) {
   const { profileId } = await context.params;
-  const token = new URL(request.url).searchParams.get("token");
+  const token = request.headers.get("X-Result-Token") ?? new URL(request.url).searchParams.get("token");
 
   const cookieStore = await cookies();
   const anonymousSessionId = cookieStore.get(ANONYMOUS_SESSION_COOKIE)?.value;

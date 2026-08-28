@@ -15,10 +15,29 @@ type ResultPayload = {
 
 type ResultViewProps = {
   profileId: string;
-  token: string;
+  token?: string;
 };
 
-export function ResultView({ profileId, token }: ResultViewProps) {
+const RESULT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+
+function getResultToken(profileId: string, legacyToken = ""): string {
+  const url = new URL(window.location.href);
+  const addressToken = url.searchParams.get("token") ?? new URLSearchParams(url.hash.slice(1)).get("token") ?? "";
+  const token = [legacyToken, addressToken, sessionStorage.getItem(`soul:result-token:${profileId}`) ?? ""]
+    .find((candidate) => RESULT_TOKEN_PATTERN.test(candidate)) ?? "";
+
+  if (token) sessionStorage.setItem(`soul:result-token:${profileId}`, token);
+  return token;
+}
+
+function cleanLegacyTokenFromAddress(profileId: string) {
+  const url = new URL(window.location.href);
+  if (url.searchParams.has("token") || new URLSearchParams(url.hash.slice(1)).has("token")) {
+    window.history.replaceState(null, "", `/result/${profileId}`);
+  }
+}
+
+export function ResultView({ profileId, token: legacyToken = "" }: ResultViewProps) {
   const [payload, setPayload] = useState<ResultPayload | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
@@ -35,12 +54,16 @@ export function ResultView({ profileId, token }: ResultViewProps) {
     async function loadResult() {
       try {
         setErrorMessage("");
-        const query = token ? `?token=${encodeURIComponent(token)}` : "";
-        const response = await fetch(`/api/soul/result/${profileId}${query}`);
+        const resultToken = getResultToken(profileId, legacyToken);
+        const response = await fetch(
+          `/api/soul/result/${profileId}`,
+          resultToken ? { headers: { "X-Result-Token": resultToken } } : undefined,
+        );
         if (!response.ok) throw new Error("result request failed");
 
         const data = (await response.json()) as ResultPayload;
         if (isMounted) {
+          cleanLegacyTokenFromAddress(profileId);
           setPayload(data);
           trackEvent("view_free_result", profileId);
         }
@@ -51,7 +74,7 @@ export function ResultView({ profileId, token }: ResultViewProps) {
 
     void loadResult();
     return () => { isMounted = false; };
-  }, [loadAttempt, profileId, token]);
+  }, [legacyToken, loadAttempt, profileId]);
 
   const freeResult = useMemo(() => {
     return payload?.freeContent.content as FreeResultContent | undefined;
@@ -90,13 +113,16 @@ export function ResultView({ profileId, token }: ResultViewProps) {
   }
 
   async function shareResult() {
-    const shareData = { title: "나의 전생 서랍", text: freeResult?.summary, url: window.location.href };
+    const resultToken = getResultToken(profileId, legacyToken);
+    const shareUrl = new URL(`/result/${profileId}`, window.location.origin);
+    if (resultToken) shareUrl.hash = `token=${encodeURIComponent(resultToken)}`;
+    const shareData = { title: "나의 전생 서랍", text: freeResult?.summary, url: shareUrl.toString() };
     try {
       if (navigator.share) {
         await navigator.share(shareData);
         setShareMessage("공유했어요");
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl.toString());
         setShareMessage("결과 링크를 복사했어요");
       }
       trackEvent("share_result", profileId);
@@ -136,7 +162,7 @@ export function ResultView({ profileId, token }: ResultViewProps) {
       const response = await fetch("/api/soul/story-preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId, token, contentType: "whole_life" }),
+        body: JSON.stringify({ profileId, token: getResultToken(profileId, legacyToken), contentType: "whole_life" }),
       });
       const data = await response.json() as { content?: WholeLifeNarrative; cached?: boolean; message?: string };
       if (!response.ok || !data.content) throw new Error(data.message || "preview request failed");

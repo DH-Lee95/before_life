@@ -88,8 +88,9 @@ export function TestForm() {
       }
 
       const data = (await response.json()) as { profileId: string; resultToken: string };
-      const resultPath = `/result/${data.profileId}?token=${encodeURIComponent(data.resultToken)}`;
+      const resultPath = `/result/${data.profileId}`;
       sessionStorage.removeItem(DRAFT_KEY);
+      sessionStorage.setItem(`soul:result-token:${data.profileId}`, data.resultToken);
       sessionStorage.setItem("soul:last-result", resultPath);
       router.push(`/analyzing?next=${encodeURIComponent(resultPath)}`);
     } catch (error) {

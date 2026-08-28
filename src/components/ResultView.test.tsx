@@ -5,6 +5,8 @@ import { ResultView } from "./ResultView";
 
 describe("ResultView", () => {
   beforeEach(() => {
+    sessionStorage.clear();
+    window.history.replaceState(null, "", "/");
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise(() => undefined)),
@@ -12,7 +14,7 @@ describe("ResultView", () => {
   });
 
   it("renders a loading state without result data", () => {
-    render(<ResultView profileId="sp_test" token="token" />);
+    render(<ResultView profileId="sp_test" />);
 
     expect(screen.getByText("전생 서랍을 여는 중")).toBeInTheDocument();
   });
@@ -118,9 +120,17 @@ describe("ResultView", () => {
       }),
     );
 
-    render(<ResultView profileId="sp_test" token="token" />);
+    window.history.replaceState(null, "", "/result/sp_test#token=shared_token");
+    render(<ResultView profileId="sp_test" />);
 
     expect(await screen.findByText("당신은 중요한 마음을 오래 품는 사람입니다.")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/soul/result/sp_test",
+      expect.objectContaining({ headers: { "X-Result-Token": "shared_token" } }),
+    );
+    expect(window.location.pathname).toBe("/result/sp_test");
+    expect(window.location.hash).toBe("");
+    expect(sessionStorage.getItem("soul:result-token:sp_test")).toBe("shared_token");
     expect(screen.getByText(/첫 번째 서랍/)).toBeInTheDocument();
     const representative = screen.getByText("대표 전생 기록");
     const nature = screen.getByText("생년월일 기반 성향");
