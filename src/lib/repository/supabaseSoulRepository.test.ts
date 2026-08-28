@@ -81,7 +81,7 @@ describe("createSupabaseSoulRepository", () => {
 
     const result = await createSupabaseSoulRepository(store).getResult(row.id, "token-hash", undefined);
 
-    expect(store.hasAccess).toHaveBeenCalledWith(row.id, "token-hash", undefined);
+    expect(store.hasAccess).toHaveBeenCalledWith(row.id, "token-hash", undefined, undefined);
     expect(result?.freeContent).toEqual({
       soulProfileId: row.id,
       contentType: "free_summary",

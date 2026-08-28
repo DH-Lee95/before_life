@@ -5,6 +5,8 @@ import { POST } from "./route";
 const getIntent = vi.hoisted(() => vi.fn());
 const approveIntent = vi.hoisted(() => vi.fn());
 const confirmTossPayment = vi.hoisted(() => vi.fn());
+const getAuthenticatedUser = vi.hoisted(() => vi.fn());
+const isSessionOwnedByUser = vi.hoisted(() => vi.fn());
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: () => ({ value: "anon_owner" }) })),
@@ -13,6 +15,8 @@ vi.mock("@/lib/payment/paymentProvider", () => ({
   getPaymentRepository: () => ({ getIntent, approveIntent }),
 }));
 vi.mock("@/lib/payment/tossPaymentProvider", () => ({ confirmTossPayment }));
+vi.mock("@/lib/auth/serverClient", () => ({ getAuthenticatedUser }));
+vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ isSessionOwnedByUser }) }));
 
 describe("POST /api/payment/confirm", () => {
   beforeEach(() => {
@@ -25,6 +29,15 @@ describe("POST /api/payment/confirm", () => {
     });
     confirmTossPayment.mockResolvedValue({ paymentKey: "payment-key", orderId: "soul_order", totalAmount: 2490, status: "DONE" });
     approveIntent.mockResolvedValue({ intent: { soulProfileId: "sp_test", souls: 3, status: "approved" }, balance: 3 });
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    isSessionOwnedByUser.mockResolvedValue(true);
+  });
+
+  it("does not confirm a payment after the account session is lost", async () => {
+    getAuthenticatedUser.mockResolvedValue(null);
+    const response = await POST(request({ paymentKey: "payment-key", orderId: "soul_order", amount: 2490 }));
+    expect(response.status).toBe(401);
+    expect(confirmTossPayment).not.toHaveBeenCalled();
   });
 
   it("verifies the stored amount, confirms with Toss, and credits through the repository", async () => {

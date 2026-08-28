@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { createFreeResult } from "@/lib/content/createFreeResult";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
-import { ANONYMOUS_SESSION_COOKIE, createAnonymousSessionId } from "@/lib/session/anonymousSession";
+import { ANONYMOUS_SESSION_COOKIE, anonymousSessionCookieOptions, createAnonymousSessionId } from "@/lib/session/anonymousSession";
 import { createResultToken, hashResultToken } from "@/lib/session/resultToken";
 import { createSoulProfile } from "@/lib/soul/createSoulProfile";
 import { validateSoulInput } from "@/lib/soul/validateSoulInput";
@@ -19,13 +19,7 @@ export async function POST(request: Request) {
     let anonymousSessionId = cookieStore.get(ANONYMOUS_SESSION_COOKIE)?.value;
     if (!anonymousSessionId) {
       anonymousSessionId = createAnonymousSessionId();
-      cookieStore.set(ANONYMOUS_SESSION_COOKIE, anonymousSessionId, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      cookieStore.set(ANONYMOUS_SESSION_COOKIE, anonymousSessionId, anonymousSessionCookieOptions());
     }
 
     const repository = getSoulRepository();

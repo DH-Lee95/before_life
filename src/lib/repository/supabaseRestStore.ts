@@ -55,10 +55,11 @@ export function createSupabaseRestStore({
     soul_profile_id: string;
     anonymous_session_id: string | null;
     result_token_hash: string | null;
+    user_id: string | null;
   }): Promise<void> {
     await upsertOne(
       "soul_profile_access",
-      "soul_profile_id,anonymous_session_id,result_token_hash",
+      "soul_profile_id,anonymous_session_id,result_token_hash,user_id",
       row,
     );
   }
@@ -79,6 +80,7 @@ export function createSupabaseRestStore({
         soul_profile_id: profileId,
         anonymous_session_id: anonymousSessionRowId,
         result_token_hash: null,
+        user_id: null,
       });
     },
     async grantTokenAccess(profileId, resultTokenHash) {
@@ -86,6 +88,7 @@ export function createSupabaseRestStore({
         soul_profile_id: profileId,
         anonymous_session_id: null,
         result_token_hash: resultTokenHash,
+        user_id: null,
       });
     },
     async upsertContent(row) {
@@ -108,11 +111,21 @@ export function createSupabaseRestStore({
       const params = selectParams({ id: `eq.${profileId}`, limit: "1" });
       return (await requestRows<SupabaseProfileRow>(`soul_profiles?${params}`))[0] ?? null;
     },
-    async hasAccess(profileId, resultTokenHash, anonymousSessionId) {
+    async hasAccess(profileId, resultTokenHash, anonymousSessionId, userId) {
       if (resultTokenHash) {
         const params = selectParams({
           soul_profile_id: `eq.${profileId}`,
           result_token_hash: `eq.${resultTokenHash}`,
+          select: "id",
+          limit: "1",
+        });
+        if ((await requestRows<{ id: string }>(`soul_profile_access?${params}`)).length > 0) return true;
+      }
+
+      if (userId) {
+        const params = selectParams({
+          soul_profile_id: `eq.${profileId}`,
+          user_id: `eq.${userId}`,
           select: "id",
           limit: "1",
         });

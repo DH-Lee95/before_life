@@ -1,6 +1,7 @@
 import { Archive, CheckCircle2, Sparkles } from "lucide-react";
 
 import { LandingActions } from "@/components/LandingActions";
+import { AccountStatus } from "@/components/auth/AccountStatus";
 
 export default function HomePage() {
   return (
@@ -11,9 +12,7 @@ export default function HomePage() {
             <Archive className="h-4 w-4 text-archive-rose" aria-hidden />
             전생 서랍
           </div>
-          <span className="rounded-full border border-archive-line px-3 py-1 text-[11px] text-archive-muted">
-            대표 기록 무료
-          </span>
+          <AccountStatus compact />
         </header>
 
         <section className="flex flex-1 flex-col justify-center py-10">

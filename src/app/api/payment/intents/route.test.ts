@@ -7,12 +7,16 @@ const paymentRepository = vi.hoisted(() => ({
   getIntent: vi.fn(),
 }));
 const getResult = vi.hoisted(() => vi.fn());
+const getAuthenticatedUser = vi.hoisted(() => vi.fn());
+const isSessionOwnedByUser = vi.hoisted(() => vi.fn());
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: () => ({ value: "anon_owner" }) })),
 }));
 vi.mock("@/lib/payment/paymentProvider", () => ({ getPaymentRepository: () => paymentRepository }));
 vi.mock("@/lib/repository/repositoryProvider", () => ({ getSoulRepository: () => ({ getResult }) }));
+vi.mock("@/lib/auth/serverClient", () => ({ getAuthenticatedUser }));
+vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ isSessionOwnedByUser }) }));
 
 describe("/api/payment/intents", () => {
   beforeEach(() => {
@@ -20,6 +24,20 @@ describe("/api/payment/intents", () => {
     vi.stubEnv("NEXT_PUBLIC_TOSS_CLIENT_KEY", "test_gck_client");
     vi.stubEnv("TOSS_SECRET_KEY", "test_gsk_secret");
     getResult.mockResolvedValue({ profile: { id: "sp_test" } });
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    isSessionOwnedByUser.mockResolvedValue(true);
+  });
+
+  it("requires a Kakao-authenticated account before creating a paid order", async () => {
+    getAuthenticatedUser.mockResolvedValue(null);
+    const response = await POST(new Request("http://localhost/api/payment/intents", {
+      method: "POST",
+      body: JSON.stringify({ profileId: "sp_test", packId: "soul_1" }),
+    }));
+
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toMatchObject({ code: "AUTH_REQUIRED" });
+    expect(paymentRepository.createIntent).not.toHaveBeenCalled();
   });
 
   it("creates an owner-bound intent with the configured pack amount", async () => {

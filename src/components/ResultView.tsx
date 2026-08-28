@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
 
 import { contentCosts, referralReward, soulPacks } from "@/config/pricing";
+import { AccountStatus } from "@/components/auth/AccountStatus";
 import { asIdentity } from "@/lib/content/koreanGrammar";
 import type { DeepDiveRecord, FreeResultContent, PublicSoulProfile, SoulContent, WholeLifeNarrative } from "@/types/soul";
 
@@ -153,7 +154,11 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         },
         body: JSON.stringify({ profileId, packId }),
       });
-      const data = await response.json() as { orderId?: string; message?: string };
+      const data = await response.json() as { orderId?: string; message?: string; code?: string };
+      if (response.status === 401 && data.code === "AUTH_REQUIRED") {
+        router.push(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+        return;
+      }
       if (!response.ok || !data.orderId) throw new Error(data.message ?? "결제를 준비하지 못했습니다.");
       router.push(`/payment/checkout?orderId=${encodeURIComponent(data.orderId)}`);
     } catch (error) {
@@ -308,6 +313,10 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         <div className="flex items-center gap-2 text-archive-card"><Coins className="h-4 w-4" aria-hidden /><p className="text-xs font-semibold">원하는 만큼 골라 여는 단위</p></div>
         <h2 className="mt-3 text-xl font-semibold">소울 충전</h2>
         <p className="mt-2 text-sm leading-6 text-archive-bg/70">깊은 기록은 1소울, 시간순으로 이어지는 전생의 일생은 2소울이 필요합니다.</p>
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-archive-bg/15 bg-archive-bg/5 p-3">
+          <p className="text-xs leading-5 text-archive-bg/70">충전한 소울은 카카오 계정에 안전하게 보관됩니다.</p>
+          <AccountStatus next={`/result/${profileId}`} compact />
+        </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           {soulPacks.map((pack) => (
             <button key={pack.id} type="button" disabled={Boolean(purchasingPackId)} onClick={() => void purchasePack(pack.id)} className={`relative rounded-lg border p-4 text-left disabled:cursor-wait disabled:opacity-60 ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}>

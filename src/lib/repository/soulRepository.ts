@@ -29,7 +29,7 @@ export type SoulRepository = {
   upsertProfile: (input: UpsertProfileInput) => Promise<StoredSoulProfile>;
   upsertContent: (input: UpsertContentInput) => Promise<SoulContent>;
   getContent: (soulProfileId: string, contentType: SoulContentType, generationKey?: string) => Promise<SoulContent | null>;
-  getResult: (profileId: string, resultTokenHash?: string, anonymousSessionId?: string) => Promise<StoredSoulResult | null>;
+  getResult: (profileId: string, resultTokenHash?: string, anonymousSessionId?: string, userId?: string) => Promise<StoredSoulResult | null>;
   listProfiles: () => Promise<StoredSoulProfile[]>;
   listContents: () => Promise<SoulContent[]>;
 };

@@ -32,7 +32,7 @@ export type SupabaseSoulStore = {
   upsertContent: (row: SupabaseContentRow) => Promise<SupabaseContentRow>;
   getContent: (profileId: string, contentType: SoulContentType, generationKey: string) => Promise<SupabaseContentRow | null>;
   getProfile: (profileId: string) => Promise<SupabaseProfileRow | null>;
-  hasAccess: (profileId: string, resultTokenHash?: string, anonymousSessionId?: string) => Promise<boolean>;
+  hasAccess: (profileId: string, resultTokenHash?: string, anonymousSessionId?: string, userId?: string) => Promise<boolean>;
   listProfiles: () => Promise<SupabaseProfileRow[]>;
   listContents: () => Promise<SupabaseContentRow[]>;
 };
@@ -66,9 +66,9 @@ export function createSupabaseSoulRepository(store: SupabaseSoulStore): SoulRepo
       const row = await store.getContent(profileId, contentType, generationKey ?? "default");
       return row ? toSoulContent(row) : null;
     },
-    async getResult(profileId, resultTokenHash, anonymousSessionId) {
-      if (!resultTokenHash && !anonymousSessionId) return null;
-      if (!await store.hasAccess(profileId, resultTokenHash, anonymousSessionId)) return null;
+    async getResult(profileId, resultTokenHash, anonymousSessionId, userId) {
+      if (!resultTokenHash && !anonymousSessionId && !userId) return null;
+      if (!await store.hasAccess(profileId, resultTokenHash, anonymousSessionId, userId)) return null;
 
       const row = await store.getProfile(profileId);
       if (!row) return null;

@@ -157,6 +157,7 @@ describe("ResultView", () => {
     expect(previewButton).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /이 기록 열기 · 1소울/ })).toBeInTheDocument();
     expect(screen.getByText("소울 충전")).toBeInTheDocument();
+    expect(screen.getByText("충전한 소울은 카카오 계정에 안전하게 보관됩니다.")).toBeInTheDocument();
     expect(screen.getByText("1소울")).toBeInTheDocument();
     expect(screen.getByText("3소울")).toBeInTheDocument();
     expect(screen.getByText("5소울")).toBeInTheDocument();

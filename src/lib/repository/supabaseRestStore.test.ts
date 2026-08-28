@@ -44,6 +44,17 @@ describe("createSupabaseRestStore", () => {
     expect(requestedUrl).not.toContain("result_token=eq");
   });
 
+  it("restores profile access from an authenticated user on a different device", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(response([{ id: "account-grant" }]));
+    const store = createSupabaseRestStore({ url: "https://project.supabase.co", serviceRoleKey: "service-secret", fetchImpl });
+
+    await expect(store.hasAccess("sp_profile", undefined, undefined, "user-id")).resolves.toBe(true);
+
+    const requestedUrl = fetchImpl.mock.calls[0][0] as string;
+    expect(requestedUrl).toContain("user_id=eq.user-id");
+    expect(requestedUrl).toContain("soul_profile_id=eq.sp_profile");
+  });
+
   it("throws a useful error for a failed database request", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(response({ message: "permission denied" }, false));
     const store = createSupabaseRestStore({

@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { getAccountRepository } from "@/lib/auth/accountRepository";
+import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { getPaymentRepository } from "@/lib/payment/paymentProvider";
 import { readTestPaymentEnvironment } from "@/lib/payment/paymentEnvironment";
 import { confirmTossPayment } from "@/lib/payment/tossPaymentProvider";
@@ -12,6 +14,10 @@ export async function POST(request: Request) {
   try {
     const anonymousSessionId = (await cookies()).get(ANONYMOUS_SESSION_COOKIE)?.value;
     if (!anonymousSessionId) return NextResponse.json({ message: "session required" }, { status: 401 });
+    const user = await getAuthenticatedUser();
+    if (!user || !await getAccountRepository().isSessionOwnedByUser(anonymousSessionId, user.id)) {
+      return NextResponse.json({ message: "카카오 로그인이 필요합니다.", code: "AUTH_REQUIRED" }, { status: 401 });
+    }
 
     const body = await request.json() as Record<string, unknown>;
     const paymentKey = typeof body.paymentKey === "string" ? body.paymentKey : "";
