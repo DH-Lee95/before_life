@@ -1,0 +1,380 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
+
+import { contentCosts, referralReward, soulPacks } from "@/config/pricing";
+import { asIdentity } from "@/lib/content/koreanGrammar";
+import type { DeepDiveRecord, FreeResultContent, PublicSoulProfile, SoulContent, WholeLifeNarrative } from "@/types/soul";
+
+type ResultPayload = {
+  profile: PublicSoulProfile;
+  freeContent: SoulContent;
+};
+
+type ResultViewProps = {
+  profileId: string;
+  token: string;
+};
+
+export function ResultView({ profileId, token }: ResultViewProps) {
+  const [payload, setPayload] = useState<ResultPayload | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [shareMessage, setShareMessage] = useState("");
+  const [purchaseMessage, setPurchaseMessage] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [wholeLifePreview, setWholeLifePreview] = useState<WholeLifeNarrative | null>(null);
+  const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [previewMessage, setPreviewMessage] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadResult() {
+      try {
+        setErrorMessage("");
+        const query = token ? `?token=${encodeURIComponent(token)}` : "";
+        const response = await fetch(`/api/soul/result/${profileId}${query}`);
+        if (!response.ok) throw new Error("result request failed");
+
+        const data = (await response.json()) as ResultPayload;
+        if (isMounted) {
+          setPayload(data);
+          trackEvent("view_free_result", profileId);
+        }
+      } catch {
+        if (isMounted) setErrorMessage("결과를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");
+      }
+    }
+
+    void loadResult();
+    return () => { isMounted = false; };
+  }, [loadAttempt, profileId, token]);
+
+  const freeResult = useMemo(() => {
+    return payload?.freeContent.content as FreeResultContent | undefined;
+  }, [payload]);
+
+  const orderedRecords = useMemo(() => {
+    return [...(freeResult?.sections.records ?? [])].sort((a, b) => Number(b.isUnlocked) - Number(a.isUnlocked));
+  }, [freeResult]);
+  const unlockedRecords = orderedRecords.filter(
+    (record): record is Extract<DeepDiveRecord, { isUnlocked: true }> => record.isUnlocked,
+  );
+  const lockedRecords = orderedRecords.filter(
+    (record): record is Extract<DeepDiveRecord, { isUnlocked: false }> => !record.isUnlocked,
+  );
+
+  if (!payload || !freeResult) {
+    return (
+      <section className="flex min-h-[70dvh] flex-col justify-center text-center">
+        <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-archive-line bg-archive-panel">
+          <Archive className="h-5 w-5 text-archive-rose" aria-hidden />
+        </div>
+        <h1 className="text-xl font-semibold">전생 서랍을 여는 중</h1>
+        <p className="mt-3 text-sm leading-6 text-archive-body">{errorMessage || "저장된 결과를 불러오고 있습니다."}</p>
+        {errorMessage ? (
+          <div className="mt-6 flex gap-2">
+            <button type="button" onClick={() => setLoadAttempt((value) => value + 1)} className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-archive-line bg-archive-panel px-4 text-sm font-semibold">
+              다시 불러오기 <RefreshCw className="h-4 w-4" aria-hidden />
+            </button>
+            <Link href="/test" className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-archive-text px-4 text-sm font-semibold text-archive-bg">
+              새로 분석 <RotateCcw className="h-4 w-4" aria-hidden />
+            </Link>
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
+  async function shareResult() {
+    const shareData = { title: "나의 전생 서랍", text: freeResult?.summary, url: window.location.href };
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShareMessage("공유했어요");
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        setShareMessage("결과 링크를 복사했어요");
+      }
+      trackEvent("share_result", profileId);
+    } catch {
+      setShareMessage("공유를 완료하지 못했어요");
+    }
+  }
+
+  function showPurchase(contentType?: string) {
+    setPurchaseMessage(true);
+    trackEvent(contentType ? "click_locked_content" : "view_payment", profileId, contentType);
+    document.getElementById("deep-archive-offer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function shareInvitation() {
+    const inviteUrl = new URL(window.location.origin);
+    inviteUrl.searchParams.set("ref", profileId);
+    const shareData = {
+      title: "전생 서랍 초대",
+      text: "나의 전생을 확인하고, 당신의 가장 선명한 전생 기록도 열어보세요.",
+      url: inviteUrl.toString(),
+    };
+
+    try {
+      if (navigator.share) await navigator.share(shareData);
+      else await navigator.clipboard.writeText(inviteUrl.toString());
+      setInviteMessage("초대 링크를 준비했어요");
+    } catch {
+      setInviteMessage("초대 링크를 공유하지 못했어요");
+    }
+  }
+
+  async function generateWholeLifePreview() {
+    try {
+      setPreviewStatus("loading");
+      setPreviewMessage("AI가 유년기부터 말년기까지 한 사람의 생애를 잇고 있습니다. 약 30초 정도 걸릴 수 있어요.");
+      const response = await fetch("/api/soul/story-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId, token, contentType: "whole_life" }),
+      });
+      const data = await response.json() as { content?: WholeLifeNarrative; cached?: boolean; message?: string };
+      if (!response.ok || !data.content) throw new Error(data.message || "preview request failed");
+
+      setWholeLifePreview(data.content);
+      setPreviewStatus("idle");
+      setPreviewMessage(data.cached ? "저장된 AI 샘플을 다시 불러왔습니다." : "새 AI 샘플을 생성했습니다.");
+    } catch {
+      setPreviewStatus("error");
+      setPreviewMessage("AI 샘플을 만들지 못했습니다. 개발 서버 설정을 확인한 뒤 다시 시도해주세요.");
+    }
+  }
+
+  return (
+    <section className="space-y-6 pb-8">
+      <header className="flex items-center justify-between">
+        <Link href="/" className="inline-flex items-center gap-2 text-sm text-archive-muted">
+          <Archive className="h-4 w-4 text-archive-rose" aria-hidden /> 전생 서랍
+        </Link>
+        <button type="button" onClick={shareResult} className="inline-flex h-9 items-center gap-2 rounded-full border border-archive-line bg-archive-panel px-3 text-xs font-semibold text-archive-body">
+          <Share2 className="h-3.5 w-3.5" aria-hidden /> 결과 공유
+        </button>
+      </header>
+      {shareMessage ? <p className="text-right text-xs text-archive-muted" aria-live="polite">{shareMessage}</p> : null}
+
+      <article className="relative overflow-hidden rounded-2xl bg-archive-text p-6 text-archive-bg shadow-[0_18px_45px_rgba(46,36,24,0.18)]">
+        <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full border border-archive-bg/10" aria-hidden />
+        <p className="text-xs font-semibold tracking-[0.16em] text-archive-card">대표 전생 기록</p>
+        <h1 className="mt-4 text-3xl font-semibold leading-tight">당신은<br />{asIdentity(freeResult.sections.occupation)}</h1>
+        <p className="mt-4 text-sm leading-7 text-archive-bg/80">{freeResult.summary}</p>
+        <dl className="mt-6 grid grid-cols-2 gap-3 border-t border-archive-bg/15 pt-5 text-sm">
+          <div><dt className="text-xs text-archive-bg/55">생활 공간</dt><dd className="mt-1 leading-6">{freeResult.sections.location}</dd></div>
+          <div><dt className="text-xs text-archive-bg/55">기록 번호</dt><dd className="mt-1">{payload.profile.displaySoulId}</dd></div>
+        </dl>
+      </article>
+
+      <section className="rounded-lg border border-archive-line bg-archive-card p-5">
+        <p className="text-xs font-medium text-archive-muted">생년월일 기반 성향</p>
+        <h2 className="mt-2 text-xl font-semibold leading-8">{freeResult.natureSummary.headline}</h2>
+        <div className="mt-4 space-y-2 text-sm leading-6 text-archive-body">
+          {freeResult.natureSummary.signals.slice(0, 3).map((signal) => <p key={signal}>· {signal}</p>)}
+        </div>
+        <p className="mt-4 border-t border-archive-line pt-4 text-sm leading-7 text-archive-body">{freeResult.natureSummary.pastLifeBridge}</p>
+      </section>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <InsightCard icon={<Brain className="h-4 w-4" aria-hidden />} label="숨은 본능" text={freeResult.natureSummary.hiddenInstinct} />
+        <InsightCard icon={<Heart className="h-4 w-4" aria-hidden />} label="끌리는 사람" text={freeResult.natureSummary.attractionPattern} />
+        <InsightCard icon={<TrendingUp className="h-4 w-4" aria-hidden />} label="성공의 흐름" text={freeResult.sections.success} />
+      </section>
+
+      <section className="rounded-xl border border-archive-line bg-archive-card p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-archive-rose">가장 선명한 기록 · 무료 공개</p>
+            <h2 className="mt-1 text-xl font-semibold">깊은 기록 1/6 열림</h2>
+          </div>
+          <span className="rounded-full bg-archive-green/15 px-3 py-1 text-xs font-semibold text-archive-green">무료</span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-archive-body">당신의 답변과 가장 가까운 기록을 먼저 복원했습니다. 나머지는 원하는 순서로 살펴볼 수 있습니다.</p>
+
+        <div className="mt-5 space-y-3">
+          {unlockedRecords.map((record) => <UnlockedRecord key={record.id} record={record} />)}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-archive-rose/35 bg-archive-card">
+        <div className="bg-archive-text p-5 text-archive-bg">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-archive-card"><BookOpen className="h-4 w-4" aria-hidden /><p className="text-xs font-semibold">긴 이야기 · 약 {freeResult.sections.wholeLife.readingTimeMinutes}분</p></div>
+            <span className="rounded-full bg-archive-bg/10 px-3 py-1 text-xs font-semibold">{freeResult.sections.wholeLife.soulCost}소울</span>
+          </div>
+          <h2 className="mt-3 text-xl font-semibold">{freeResult.sections.wholeLife.title}</h2>
+          <p className="mt-2 text-sm leading-6 text-archive-bg/70">{freeResult.sections.wholeLife.description}</p>
+        </div>
+        <div className="p-5">
+          <ol className="space-y-3">
+            {freeResult.sections.wholeLife.chapterPreviews.map((chapter, index) => (
+              <li key={chapter.stage} className="flex items-start gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-archive-panel text-[11px] font-semibold text-archive-rose">{index + 1}</span>
+                <div><p className="text-xs font-semibold text-archive-rose">{chapter.stage}</p><p className="mt-0.5 text-sm text-archive-body">{chapter.title}</p></div>
+              </li>
+            ))}
+          </ol>
+          <button type="button" onClick={() => showPurchase("whole_life")} className="mt-5 h-11 w-full rounded-lg bg-archive-text text-sm font-semibold text-archive-bg">
+            전생의 일생 열기 · {contentCosts.wholeLife}소울
+          </button>
+          {process.env.NODE_ENV !== "production" ? (
+            <div className="mt-3 rounded-lg border border-dashed border-archive-rose/40 bg-archive-rose/5 p-3">
+              <p className="text-[11px] leading-5 text-archive-muted">로컬 개발 전용 · 첫 생성에만 실제 OpenAI 비용이 발생하며 이후에는 캐시를 사용합니다.</p>
+              <button type="button" disabled={previewStatus === "loading"} onClick={generateWholeLifePreview} className="mt-2 h-10 w-full rounded-lg border border-archive-rose/30 bg-archive-card text-xs font-semibold text-archive-rose disabled:cursor-wait disabled:opacity-60">
+                {previewStatus === "loading" ? "AI 일생을 생성하는 중…" : "개발용 AI 일생 미리보기"}
+              </button>
+              {previewMessage ? <p className={`mt-2 text-center text-[11px] leading-5 ${previewStatus === "error" ? "text-archive-rose" : "text-archive-muted"}`} aria-live="polite">{previewMessage}</p> : null}
+            </div>
+          ) : null}
+          <p className="mt-2 text-center text-[11px] leading-5 text-archive-muted">단편을 합친 글이 아니라, 유년기부터 말년기까지 이어지는 별도의 장편 기록입니다.</p>
+        </div>
+      </section>
+
+      {wholeLifePreview ? <WholeLifeStory story={wholeLifePreview} /> : null}
+
+      <section className="rounded-xl border border-archive-line bg-archive-card p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-archive-rose">원하는 장면부터 선택</p>
+            <h2 className="mt-1 text-xl font-semibold">아직 잠긴 깊은 기록 5개</h2>
+          </div>
+          <span className="rounded-full bg-archive-rose/10 px-3 py-1 text-xs font-semibold text-archive-rose">각 1소울</span>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-archive-body">전체 생애보다 궁금한 한 장면이 있다면 사랑, 재산, 마지막 날처럼 원하는 주제만 골라 열 수 있습니다.</p>
+        <div className="mt-5 space-y-3">
+          {lockedRecords.map((record) => <LockedRecord key={record.id} record={record} onOpen={() => showPurchase(record.id)} />)}
+        </div>
+      </section>
+
+      <section id="deep-archive-offer" className="rounded-xl bg-archive-text p-5 text-archive-bg">
+        <div className="flex items-center gap-2 text-archive-card"><Coins className="h-4 w-4" aria-hidden /><p className="text-xs font-semibold">원하는 만큼 골라 여는 단위</p></div>
+        <h2 className="mt-3 text-xl font-semibold">소울 충전</h2>
+        <p className="mt-2 text-sm leading-6 text-archive-bg/70">깊은 기록은 1소울, 시간순으로 이어지는 전생의 일생은 2소울이 필요합니다.</p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          {soulPacks.map((pack) => (
+            <button key={pack.id} type="button" onClick={() => showPurchase(pack.id)} className={`relative rounded-lg border p-4 text-left ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}>
+              {pack.badge ? <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pack.souls === 7 ? "bg-archive-rose/15 text-archive-rose" : "bg-archive-bg/10 text-archive-card"}`}>{pack.badge}</span> : null}
+              <strong className="block text-lg">{pack.souls}소울</strong>
+              <span className={`mt-1 block text-sm ${pack.souls === 7 ? "text-archive-body" : "text-archive-bg/65"}`}>{pack.priceKrw.toLocaleString("ko-KR")}원</span>
+              <span className={`mt-2 block text-[11px] leading-4 ${pack.souls === 7 ? "text-archive-muted" : "text-archive-bg/50"}`}>{pack.description}</span>
+            </button>
+          ))}
+        </div>
+        {purchaseMessage ? <p className="mt-4 text-xs leading-5 text-archive-bg/65" aria-live="polite">지금은 상품 구성을 확인하는 체험 모드입니다. 실제 결제와 소울 차감은 계정·결제 연동 후 서버에서 처리됩니다.</p> : null}
+      </section>
+
+      <section className="rounded-xl border border-archive-line bg-archive-panel p-5">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-archive-rose/10 text-archive-rose"><Gift className="h-4 w-4" aria-hidden /></span>
+          <div>
+            <p className="text-xs font-semibold text-archive-rose">첫 초대 보상</p>
+            <h2 className="mt-1 text-lg font-semibold">친구 한 명을 초대하면 {referralReward.souls}소울</h2>
+            <p className="mt-2 text-sm leading-6 text-archive-body">초대받은 친구가 처음으로 무료 결과를 끝까지 확인하면 보상이 지급됩니다. 계정당 한 번만 받을 수 있어요.</p>
+          </div>
+        </div>
+        <button type="button" onClick={shareInvitation} className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-archive-line bg-archive-card text-sm font-semibold">
+          <Share2 className="h-4 w-4" aria-hidden /> 친구에게 초대 링크 보내기
+        </button>
+        {inviteMessage ? <p className="mt-2 text-center text-xs text-archive-muted" aria-live="polite">{inviteMessage}</p> : null}
+        <p className="mt-2 text-center text-[11px] leading-5 text-archive-muted">보상 지급은 로그인·부정 초대 방지 기능이 연결되는 정식 출시부터 적용됩니다.</p>
+      </section>
+
+      <section className="flex gap-3">
+        <Link href="/test" className="flex h-12 flex-1 items-center justify-center gap-2 rounded-lg border border-archive-line bg-archive-panel px-4 text-sm font-semibold text-archive-body">
+          <RotateCcw className="h-4 w-4" aria-hidden /> 다시 분석하기
+        </Link>
+      </section>
+
+      <p className="text-center text-[11px] leading-5 text-archive-muted">전생 서랍은 AI 기반 엔터테인먼트 스토리텔링 서비스입니다.</p>
+    </section>
+  );
+}
+
+function WholeLifeStory({ story }: { story: WholeLifeNarrative }) {
+  return (
+    <article className="rounded-xl border border-archive-rose/40 bg-archive-card p-5">
+      <p className="text-xs font-semibold text-archive-rose">개발용 AI 생성 결과 · 약 {story.readingTimeMinutes}분</p>
+      <h2 className="mt-2 text-2xl font-semibold leading-9">{story.title}</h2>
+      <p className="mt-5 text-[15px] leading-8 text-archive-body">{story.opening}</p>
+      <div className="mt-8 space-y-9">
+        {story.chapters.map((chapter) => (
+          <section key={chapter.stage}>
+            <p className="text-xs font-semibold text-archive-rose">{chapter.stage}</p>
+            <h3 className="mt-1 text-lg font-semibold">{chapter.title}</h3>
+            <div className="mt-4 space-y-4">
+              {chapter.paragraphs.map((paragraph, index) => <p key={`${chapter.stage}-${index}`} className="text-sm leading-8 text-archive-body">{paragraph}</p>)}
+            </div>
+          </section>
+        ))}
+      </div>
+      <aside className="mt-8 rounded-lg border border-archive-line bg-archive-panel p-4">
+        <p className="text-xs font-semibold text-archive-rose">현생에 남은 의미</p>
+        <p className="mt-2 text-sm leading-8 text-archive-body">{story.presentMeaning}</p>
+      </aside>
+    </article>
+  );
+}
+
+function UnlockedRecord({ record }: { record: Extract<DeepDiveRecord, { isUnlocked: true }> }) {
+  return (
+    <details open className="group rounded-lg border border-archive-rose/40 bg-archive-panel">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 [&::-webkit-details-marker]:hidden">
+        <span><span className="block text-sm font-semibold">{record.title}</span><span className="mt-1 block text-xs text-archive-muted">약 {record.readingTimeMinutes}분 · 전체 기록</span></span>
+        <Check className="h-4 w-4 text-archive-green" aria-hidden />
+      </summary>
+      <article className="border-t border-archive-line px-4 pb-5 pt-4">
+        <p className="text-[15px] leading-8 text-archive-body">{record.opening}</p>
+        <div className="mt-7 space-y-7">
+          {record.chapters.map((chapter) => (
+            <section key={chapter.title}>
+              <h3 className="text-base font-semibold text-archive-text">{chapter.title}</h3>
+              <div className="mt-3 space-y-3">{chapter.paragraphs.map((paragraph, index) => <p key={`${chapter.title}-${index}`} className="text-sm leading-8 text-archive-body">{paragraph}</p>)}</div>
+            </section>
+          ))}
+        </div>
+        <aside className="mt-7 rounded-lg border border-archive-line bg-archive-card p-4">
+          <p className="text-xs font-semibold text-archive-rose">현생에 남은 의미</p>
+          <p className="mt-2 text-sm leading-8 text-archive-body">{record.presentMeaning}</p>
+        </aside>
+      </article>
+    </details>
+  );
+}
+
+function LockedRecord({ record, onOpen }: { record: Extract<DeepDiveRecord, { isUnlocked: false }>; onOpen: () => void }) {
+  return (
+    <article className="rounded-lg border border-archive-line bg-archive-panel p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div><p className="text-sm font-semibold">{record.title}</p><p className="mt-1 text-xs text-archive-muted">약 {record.readingTimeMinutes}분 · 잠긴 기록</p></div>
+        <LockKeyhole className="h-4 w-4 text-archive-rose" aria-hidden />
+      </div>
+      <p className="mt-3 text-sm leading-6 text-archive-body">{record.preview}</p>
+      <p className="mt-2 text-xs leading-5 text-archive-muted">{record.hint}</p>
+      <button type="button" onClick={onOpen} className="mt-4 h-10 w-full rounded-lg border border-archive-line bg-archive-card text-xs font-semibold text-archive-text">이 기록 열기 · {contentCosts.deepRecord}소울</button>
+    </article>
+  );
+}
+
+function InsightCard({ icon, label, text }: { icon: React.ReactNode; label: string; text: string }) {
+  return (
+    <article className="rounded-lg border border-archive-line bg-archive-panel p-4">
+      <div className="flex items-center gap-2 text-archive-rose">{icon}<p className="text-xs font-semibold tracking-wide">{label}</p></div>
+      <p className="mt-3 text-sm leading-7 text-archive-body">{text}</p>
+    </article>
+  );
+}
+
+function trackEvent(name: "view_free_result" | "click_locked_content" | "view_payment" | "share_result", profileId: string, contentType?: string) {
+  void fetch("/api/analytics", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, profileId, ...(contentType ? { contentType } : {}) }),
+  }).catch(() => undefined);
+}

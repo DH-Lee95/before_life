@@ -1,0 +1,14 @@
+{
+  "phases": [
+    {
+      "dir": "1-drawer-mvp",
+      "status": "completed",
+      "summary": "전생 서랍 MVP의 deterministic 성향 요약, API 입력 검증, warm drawer UI를 구현하고 전체 검증을 통과했다."
+    },
+    {
+      "dir": "2-supabase-persistence",
+      "status": "completed",
+      "summary": "Supabase migration, 비동기 repository, 서버 provider와 접근권한 보안을 구현하고 전체 검증을 통과했다."
+    }
+  ]
+}

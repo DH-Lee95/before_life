@@ -1,0 +1,36 @@
+{
+  "project": "전생서랍",
+  "phase": "supabase-persistence",
+  "steps": [
+    {
+      "step": 0,
+      "name": "repository-contract",
+      "status": "completed",
+      "summary": "SoulRepository 계약을 별도 모듈로 추출하고 메모리 구현을 비동기 계약으로 전환했다."
+    },
+    {
+      "step": 1,
+      "name": "database-schema",
+      "status": "completed",
+      "summary": "결정적 프로필·콘텐츠 유일성과 분리된 접근권한, RLS를 포함한 Supabase migration을 추가했다."
+    },
+    {
+      "step": 2,
+      "name": "supabase-repository",
+      "status": "completed",
+      "summary": "주입 가능한 Supabase store 계약과 PostgREST 서버 클라이언트, 영속 SoulRepository 구현 및 보안 회귀 테스트를 추가했다."
+    },
+    {
+      "step": 3,
+      "name": "api-repository-provider",
+      "status": "completed",
+      "summary": "완전한 서버 환경 설정에서만 Supabase를 선택하는 provider를 추가하고 모든 Soul API를 비동기 저장소에 연결했다."
+    },
+    {
+      "step": 4,
+      "name": "persistence-verification",
+      "status": "completed",
+      "summary": "Supabase 설정·보안·수동 검증 문서를 추가하고 99개 테스트, lint, production build를 통과했다."
+    }
+  ]
+}

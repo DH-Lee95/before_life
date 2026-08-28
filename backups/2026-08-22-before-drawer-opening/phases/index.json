@@ -1,0 +1,9 @@
+{
+  "phases": [
+    {
+      "dir": "1-drawer-mvp",
+      "status": "completed",
+      "summary": "전생 서랍 MVP의 deterministic 성향 요약, API 입력 검증, warm drawer UI를 구현하고 전체 검증을 통과했다."
+    }
+  ]
+}
