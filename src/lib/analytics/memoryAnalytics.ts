@@ -1,7 +1,8 @@
 import type { AnalyticsEvent } from "@/types/analytics";
 
-export type MemoryAnalytics = {
-  track: (event: AnalyticsEvent) => AnalyticsEvent;
+import type { AnalyticsRepository } from "./analyticsRepository";
+
+export type MemoryAnalytics = AnalyticsRepository & {
   list: () => AnalyticsEvent[];
 };
 
@@ -9,7 +10,7 @@ export function createMemoryAnalytics(): MemoryAnalytics {
   const events: AnalyticsEvent[] = [];
 
   return {
-    track(event) {
+    async track(event) {
       const stored = {
         ...event,
         createdAt: event.createdAt ?? new Date().toISOString(),

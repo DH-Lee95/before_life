@@ -34,7 +34,7 @@ src/
 ## 핵심 패턴
 - Server API boundary: 외부 API, 비밀 키, DB 접근은 API route/server module에 둔다.
 - Pure domain engine: `src/lib/soul/`은 가능한 한 순수 함수로 유지한다.
-- Repository abstraction: Supabase 환경 변수가 모두 있으면 PostgREST 기반 영속 저장소를 사용하고, 둘 다 없으면 로컬 개발·테스트용 메모리 저장소를 사용한다. 일부만 설정된 배포는 즉시 실패한다.
+- Repository abstraction: Supabase 환경 변수가 모두 있으면 프로필·결제·analytics 모두 PostgREST 기반 영속 저장소를 사용하고, 둘 다 없으면 로컬 개발·테스트용 메모리 저장소를 사용한다. 일부만 설정된 배포는 즉시 실패한다.
 - Content provider abstraction: Phase 1은 deterministic local writer, OpenAI 연동은 provider 교체로 붙인다.
 - Idempotent creation: `soul_hash + input_version + engine_version` 기준으로 profile을 재사용한다.
 - Cost-aware content generation: 생년월일 기반 성향 요약과 전생 핵심 설정은 서버 순수 함수와 config pool에서 만든다. LLM에는 압축된 설정만 전달하고 생성된 장문 스토리는 캐시한다.
@@ -149,4 +149,5 @@ birth_date + optional birth_time
 - 콘텐츠 캐시는 `soul_profile_id + content_type + generation_key`로 재사용한다.
 - 유료 콘텐츠 권한은 `soul_content_unlocks`에서 계정별로 관리하고 사용자 단위 DB 잠금으로 동시 차감을 직렬화한다.
 - Supabase URL과 service role key는 repository provider가 서버 환경에서만 읽는다.
+- Analytics API는 클라이언트가 보낸 세션 값을 무시하고 HTTP-only 익명 세션 cookie를 내부 session UUID로 해석해 `analytics_events`에 저장한다.
 - 실제 프로젝트 설정과 연결 검증 절차는 `docs/SUPABASE_SETUP.md`를 따른다.

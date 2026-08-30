@@ -9,8 +9,9 @@ Supabase가 설정되면 다음 데이터가 서버 재시작과 배포 후에�
 - result token hash와 익명 세션 기반 결과 접근권한
 - 무료 결과와 생성된 장문 콘텐츠 캐시
 - 카카오 로그인 계정에 귀속된 소울 잔액과 유료 콘텐츠 잠금 해제 권한
+- 익명 세션·UTM·결과/콘텐츠 속성이 연결된 analytics 이벤트
 
-`analytics_events` 테이블도 migration에 포함되어 있지만 analytics API 연결은 후속 작업이다. 현재 이벤트 수집 구현은 여전히 개발용 메모리 저장소를 사용한다.
+Analytics API는 Supabase가 설정된 환경에서 `analytics_events`에 영속 저장하고, 설정이 전혀 없는 로컬 테스트 환경에서만 메모리 저장소를 사용한다.
 
 ## 프로젝트에 적용
 
@@ -40,6 +41,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 - 모든 영속 테이블은 RLS를 활성화하고 `anon`, `authenticated` 직접 권한을 제거한다. 현재 접근은 서버 API route의 service role 요청으로만 수행한다.
 - `soul_contents`는 계정 간 재사용하는 생성 캐시일 뿐이다. 유료 열람 권한은 `soul_content_unlocks`의 `(user_id, soul_profile_id, content_type)` 행으로만 판정한다.
 - 잠금 해제 RPC는 사용자 단위 transaction advisory lock으로 동시 요청을 직렬화해 중복 차감과 음수 잔액을 방지한다.
+- Analytics는 API route의 service role repository로만 저장하며, 클라이언트 payload의 `anonymousSessionId`는 무시하고 서버 cookie를 사용한다.
 
 ## 수동 연결 검증
 

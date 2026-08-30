@@ -14,6 +14,11 @@
       "dir": "3-account-soul-unlock",
       "status": "blocked",
       "summary": "계정별 유료 콘텐츠 권한과 잠금 해제를 구현하고 before_life Supabase에 배포했으며, 실계정 2개가 필요한 교차 계정·동시 차감 E2E만 남았다."
+    },
+    {
+      "dir": "4-analytics-persistence",
+      "status": "completed",
+      "summary": "Analytics repository를 memory/Supabase provider로 분리하고 API를 영속 저장에 연결했으며 before_life 스키마와 RLS 차단을 검증했다."
     }
   ]
 }
