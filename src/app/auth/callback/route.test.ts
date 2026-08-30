@@ -33,4 +33,12 @@ describe("Kakao callback route", () => {
     expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test");
     expect(response.headers.get("set-cookie")).toContain("auth_return_path=;");
   });
+
+  it("keeps a failed login on the stored result instead of dropping to the landing page", async () => {
+    cookieGet.mockImplementation((name: string) => name === "auth_return_path" ? { value: "/result/sp_test" } : undefined);
+
+    const response = await GET(new Request("https://before-life.vercel.app/auth/callback?error=access_denied"));
+
+    expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test?auth=failed");
+  });
 });

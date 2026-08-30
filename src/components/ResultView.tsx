@@ -1,19 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
 
 import { contentCosts, referralReward, soulPacks } from "@/config/pricing";
-import { AccountStatus } from "@/components/auth/AccountStatus";
 import { asIdentity } from "@/lib/content/koreanGrammar";
+import { clearPendingResultAction, readPendingResultAction, savePendingResultAction } from "@/lib/auth/pendingResultAction";
 import type { DeepDiveRecord, FreeResultContent, LockedContentType, PublicSoulProfile, SoulContent, StoryNarrative, WholeLifeNarrative } from "@/types/soul";
 
 type ResultPayload = {
   profile: PublicSoulProfile;
   freeContent: SoulContent;
   unlockedContents?: SoulContent[];
+  account: { authenticated: boolean; nickname?: string; balance: number };
 };
 
 type ResultViewProps = {
@@ -54,6 +55,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   const [unlockingContentType, setUnlockingContentType] = useState("");
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">("idle");
   const [previewMessage, setPreviewMessage] = useState("");
+  const resumedAction = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -81,6 +83,9 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
             }
           }
           setOpenedRecords(restoredRecords);
+          if (new URL(window.location.href).searchParams.get("auth") === "failed") {
+            setPurchaseMessage("카카오 로그인을 완료하지 못했습니다. 다시 한 번 시도해주세요.");
+          }
           trackEvent("view_free_result", profileId);
         }
       } catch {
@@ -105,6 +110,17 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   const lockedRecords = orderedRecords.filter(
     (record): record is Extract<DeepDiveRecord, { isUnlocked: false }> => !record.isUnlocked,
   );
+
+  useEffect(() => {
+    if (!payload?.account.authenticated || resumedAction.current) return;
+    const pending = readPendingResultAction(profileId);
+    if (!pending) return;
+    resumedAction.current = true;
+    if (pending.kind === "unlock") void unlockContent(pending.contentType);
+    else void purchasePack(pending.packId);
+    // The action functions intentionally use the latest loaded result state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payload?.account.authenticated, profileId]);
 
   if (!payload || !freeResult) {
     return (
@@ -172,10 +188,12 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         balance?: number;
       };
       if (response.status === 401 && data.code === "AUTH_REQUIRED") {
-        router.push(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+        savePendingResultAction(profileId, { kind: "unlock", contentType });
+        window.location.assign(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
         return;
       }
       if (response.status === 402 && data.code === "INSUFFICIENT_SOUL") {
+        savePendingResultAction(profileId, { kind: "unlock", contentType });
         setPurchaseMessage(data.message ?? "소울이 부족합니다. 아래에서 필요한 만큼 충전해주세요.");
         showPurchase(contentType);
         return;
@@ -184,6 +202,11 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
 
       if (contentType === "whole_life") setWholeLifePreview(data.content as WholeLifeNarrative);
       else setOpenedRecords((records) => ({ ...records, [contentType]: data.content as StoryNarrative }));
+      clearPendingResultAction(profileId);
+      setPayload((current) => current ? {
+        ...current,
+        account: { ...current.account, balance: data.balance ?? current.account.balance },
+      } : current);
       setPurchaseMessage(`기록을 열었습니다. 남은 소울은 ${data.balance ?? 0}개입니다.`);
       trackEvent("unlock_content", profileId, contentType);
     } catch (error) {
@@ -208,10 +231,13 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       });
       const data = await response.json() as { orderId?: string; message?: string; code?: string };
       if (response.status === 401 && data.code === "AUTH_REQUIRED") {
-        router.push(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+        savePendingResultAction(profileId, { kind: "purchase", packId });
+        window.location.assign(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
         return;
       }
       if (!response.ok || !data.orderId) throw new Error(data.message ?? "결제를 준비하지 못했습니다.");
+      const pending = readPendingResultAction(profileId);
+      if (pending?.kind === "purchase") clearPendingResultAction(profileId);
       router.push(`/payment/checkout?orderId=${encodeURIComponent(data.orderId)}`);
     } catch (error) {
       setPurchasingPackId("");
@@ -260,13 +286,18 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
 
   return (
     <section className="space-y-6 pb-8">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-3">
         <Link href="/" className="inline-flex items-center gap-2 text-sm text-archive-muted">
           <Archive className="h-4 w-4 text-archive-rose" aria-hidden /> 전생 서랍
         </Link>
-        <button type="button" onClick={shareResult} className="inline-flex h-9 items-center gap-2 rounded-full border border-archive-line bg-archive-panel px-3 text-xs font-semibold text-archive-body">
-          <Share2 className="h-3.5 w-3.5" aria-hidden /> 결과 공유
-        </button>
+        <div className="flex items-center gap-2">
+          {payload.account.authenticated ? (
+            <span className="rounded-full bg-archive-rose/10 px-3 py-2 text-xs font-semibold text-archive-rose">{payload.account.balance}소울 보유</span>
+          ) : null}
+          <button type="button" onClick={shareResult} className="inline-flex h-9 items-center gap-2 rounded-full border border-archive-line bg-archive-panel px-3 text-xs font-semibold text-archive-body">
+            <Share2 className="h-3.5 w-3.5" aria-hidden /> 결과 공유
+          </button>
+        </div>
       </header>
       {shareMessage ? <p className="text-right text-xs text-archive-muted" aria-live="polite">{shareMessage}</p> : null}
 
@@ -372,7 +403,9 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         <p className="mt-2 text-sm leading-6 text-archive-bg/70">깊은 기록은 1소울, 시간순으로 이어지는 전생의 일생은 2소울이 필요합니다.</p>
         <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-archive-bg/15 bg-archive-bg/5 p-3">
           <p className="text-xs leading-5 text-archive-bg/70">충전한 소울은 카카오 계정에 안전하게 보관됩니다.</p>
-          <AccountStatus next={`/result/${profileId}`} compact />
+          <span className="shrink-0 text-xs font-semibold">
+            {payload.account.authenticated ? `${payload.account.balance}소울 보유` : "결제 시 카카오 로그인"}
+          </span>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           {soulPacks.map((pack) => (

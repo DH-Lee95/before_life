@@ -27,13 +27,25 @@ export async function GET(request: Request, context: RouteContext) {
   if (!result || !result.freeContent) {
     return NextResponse.json({ message: "result not found" }, { status: 404 });
   }
-  const unlockedContents = user
-    ? await getAccountRepository().getUnlockedContents(user.id, profileId)
-    : [];
+  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
+  const nickname = metadata
+    ? [metadata.nickname, metadata.name, metadata.preferred_username]
+      .find((value): value is string => typeof value === "string" && value.trim().length > 0)
+    : undefined;
+  const accountRepository = user ? getAccountRepository() : null;
+  const [unlockedContents, balance] = user && accountRepository
+    ? await Promise.all([
+      accountRepository.getUnlockedContents(user.id, profileId),
+      accountRepository.getBalance(user.id),
+    ])
+    : [[], 0];
 
   return NextResponse.json({
     profile: toPublicSoulProfile(result.profile),
     freeContent: result.freeContent,
     unlockedContents,
+    account: user
+      ? { authenticated: true, ...(nickname ? { nickname } : {}), balance }
+      : { authenticated: false, balance: 0 },
   });
 }

@@ -73,6 +73,7 @@ describe("ResultView", () => {
                   pastLifeBridge: "이 결이 가장 강하게 이어진 기록은 첫 번째 서랍에 남아 있습니다.",
                 },
               },
+              account: { authenticated: true, nickname: "서랍지기", balance: 4 },
               freeContent: {
                 content: {
                   title: "서연님의 전생 서랍",
@@ -154,6 +155,7 @@ describe("ResultView", () => {
     expect(window.location.hash).toBe("");
     expect(sessionStorage.getItem("soul:result-token:sp_test")).toBe("shared_token");
     expect(screen.getByText(/첫 번째 서랍/)).toBeInTheDocument();
+    expect(screen.getAllByText("4소울 보유")).not.toHaveLength(0);
     const representative = screen.getByText("대표 전생 기록");
     const nature = screen.getByText("생년월일 기반 성향");
     expect(representative.compareDocumentPosition(nature) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -195,6 +197,7 @@ describe("ResultView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /이 기록 열기 · 1소울/ }));
     expect(await screen.findByText("끝까지 남은 편지")).toBeInTheDocument();
+    expect(screen.getAllByText("2소울 보유")).not.toHaveLength(0);
     expect(fetch).toHaveBeenCalledWith("/api/soul/unlock", expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ profileId: "sp_test", contentType: "last_day" }),

@@ -7,17 +7,17 @@ import { ANONYMOUS_SESSION_COOKIE, anonymousSessionCookieOptions, createAnonymou
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
-  if (!code) return NextResponse.redirect(new URL("/?auth=failed", requestUrl.origin));
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return NextResponse.redirect(new URL("/?auth=failed", requestUrl.origin));
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return NextResponse.redirect(new URL("/?auth=failed", requestUrl.origin));
   const cookieStore = await cookies();
   const next = safeReturnPath(
     requestUrl.searchParams.get("next") ?? cookieStore.get("auth_return_path")?.value,
   );
+  const code = requestUrl.searchParams.get("code");
+  if (!code) return authFailure(requestUrl, next);
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) return authFailure(requestUrl, next);
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) return authFailure(requestUrl, next);
   let anonymousSessionId = cookieStore.get(ANONYMOUS_SESSION_COOKIE)?.value;
   if (!anonymousSessionId) {
     anonymousSessionId = createAnonymousSessionId();
@@ -27,4 +27,10 @@ export async function GET(request: Request) {
   const response = NextResponse.redirect(new URL(next, requestUrl.origin));
   response.cookies.delete("auth_return_path");
   return response;
+}
+
+function authFailure(requestUrl: URL, next: string) {
+  const returnUrl = new URL(next, requestUrl.origin);
+  returnUrl.searchParams.set("auth", "failed");
+  return NextResponse.redirect(returnUrl);
 }

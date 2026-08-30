@@ -8,10 +8,11 @@ import { GET } from "./route";
 
 const getAuthenticatedUser = vi.hoisted(() => vi.fn());
 const getUnlockedContents = vi.hoisted(() => vi.fn());
+const getBalance = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/serverClient", () => ({ getAuthenticatedUser }));
 vi.mock("@/lib/auth/accountRepository", () => ({
-  getAccountRepository: () => ({ getUnlockedContents }),
+  getAccountRepository: () => ({ getUnlockedContents, getBalance }),
 }));
 
 vi.mock("next/headers", () => ({
@@ -23,6 +24,7 @@ describe("GET /api/soul/result/[profileId]", () => {
     vi.clearAllMocks();
     getAuthenticatedUser.mockResolvedValue(null);
     getUnlockedContents.mockResolvedValue([]);
+    getBalance.mockResolvedValue(0);
   });
 
   it("allows an owning session without a URL token and returns only public profile fields", async () => {
@@ -42,6 +44,7 @@ describe("GET /api/soul/result/[profileId]", () => {
     expect(response.status).toBe(200);
     expect(body.profile).toEqual({ displaySoulId: stored.displaySoulId, discoveryPercent: 17 });
     expect(body.unlockedContents).toEqual([]);
+    expect(body.account).toEqual({ authenticated: false, balance: 0 });
     expect(body.profile).not.toHaveProperty("resultTokenHashes");
     expect(body).not.toHaveProperty("lockedContentTypes");
   });
@@ -86,6 +89,7 @@ describe("GET /api/soul/result/[profileId]", () => {
     };
     getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
     getUnlockedContents.mockResolvedValue([unlocked]);
+    getBalance.mockResolvedValue(4);
 
     const response = await GET(new Request(`http://localhost/api/soul/result/${stored.id}`), {
       params: Promise.resolve({ profileId: stored.id }),
@@ -93,6 +97,9 @@ describe("GET /api/soul/result/[profileId]", () => {
 
     expect(response.status).toBe(200);
     expect(getUnlockedContents).toHaveBeenCalledWith("user-id", stored.id);
-    await expect(response.json()).resolves.toMatchObject({ unlockedContents: [unlocked] });
+    await expect(response.json()).resolves.toMatchObject({
+      unlockedContents: [unlocked],
+      account: { authenticated: true, balance: 4 },
+    });
   });
 });
