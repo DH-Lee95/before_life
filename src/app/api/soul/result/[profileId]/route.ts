@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { getAccountRepository } from "@/lib/auth/accountRepository";
 import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
 import { ANONYMOUS_SESSION_COOKIE } from "@/lib/session/anonymousSession";
@@ -26,9 +27,13 @@ export async function GET(request: Request, context: RouteContext) {
   if (!result || !result.freeContent) {
     return NextResponse.json({ message: "result not found" }, { status: 404 });
   }
+  const unlockedContents = user
+    ? await getAccountRepository().getUnlockedContents(user.id, profileId)
+    : [];
 
   return NextResponse.json({
     profile: toPublicSoulProfile(result.profile),
     freeContent: result.freeContent,
+    unlockedContents,
   });
 }

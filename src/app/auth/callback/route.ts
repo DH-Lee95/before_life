@@ -8,7 +8,6 @@ import { ANONYMOUS_SESSION_COOKIE, anonymousSessionCookieOptions, createAnonymou
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = safeReturnPath(requestUrl.searchParams.get("next"));
   if (!code) return NextResponse.redirect(new URL("/?auth=failed", requestUrl.origin));
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -16,11 +15,16 @@ export async function GET(request: Request) {
   const { data } = await supabase.auth.getUser();
   if (!data.user) return NextResponse.redirect(new URL("/?auth=failed", requestUrl.origin));
   const cookieStore = await cookies();
+  const next = safeReturnPath(
+    requestUrl.searchParams.get("next") ?? cookieStore.get("auth_return_path")?.value,
+  );
   let anonymousSessionId = cookieStore.get(ANONYMOUS_SESSION_COOKIE)?.value;
   if (!anonymousSessionId) {
     anonymousSessionId = createAnonymousSessionId();
     cookieStore.set(ANONYMOUS_SESSION_COOKIE, anonymousSessionId, anonymousSessionCookieOptions());
   }
   await getAccountRepository().claimSession(anonymousSessionId, data.user.id);
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  const response = NextResponse.redirect(new URL(next, requestUrl.origin));
+  response.cookies.delete("auth_return_path");
+  return response;
 }

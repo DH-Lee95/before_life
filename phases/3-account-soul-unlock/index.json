@@ -1,0 +1,30 @@
+{
+  "project": "전생서랍",
+  "phase": "account-soul-unlock",
+  "steps": [
+    {
+      "step": 0,
+      "name": "oauth-result-return",
+      "status": "completed",
+      "summary": "카카오 OAuth 왕복 중 안전한 결과 복귀 경로를 HTTP-only cookie로 보존하고 익명 세션을 계정에 연결했다."
+    },
+    {
+      "step": 1,
+      "name": "account-content-entitlement",
+      "status": "completed",
+      "summary": "유료 콘텐츠 캐시와 계정별 열람 권한을 분리하고 동시 요청에도 한 번만 차감하는 RPC를 구현했다."
+    },
+    {
+      "step": 2,
+      "name": "unlock-result-ui",
+      "status": "completed",
+      "summary": "결과 화면에서 로그인·잔액·잠금 해제·새로고침 복원 흐름을 API 응답 기준으로 연결했다."
+    },
+    {
+      "step": 3,
+      "name": "live-supabase-verification",
+      "status": "blocked",
+      "blocked_reason": "before_life 프로젝트 migration과 서버 전용 권한은 검증했지만, 실계정 2개의 로그인·충전 상태가 없어 교차 계정 격리와 동시 unlock 1회 차감 E2E를 완료할 수 없다."
+    }
+  ]
+}

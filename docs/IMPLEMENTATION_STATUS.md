@@ -1,6 +1,6 @@
 # Phase 1 구현 상태
 
-최종 갱신: 2026-08-28
+최종 갱신: 2026-08-30
 
 ## 구현 완료
 - Next.js App Router 기반 앱 골격
@@ -33,6 +33,12 @@
 - Supabase Postgres migration과 비동기 repository 계약
 - result token hash·익명 세션을 별도 접근권한 행으로 저장하는 Supabase repository
 - 환경 변수 완전 설정 시 Supabase, 미설정 시 로컬 memory를 선택하는 서버 provider
+- 카카오 OAuth 로그인과 익명 결과의 계정 claim
+- OAuth provider가 callback query를 보존하지 않아도 안전한 결과 복귀 경로 유지
+- 로그인 계정의 소울 잔액 기반 유료 장문 생성·캐시·잠금 해제 API
+- 계정별 `soul_content_unlocks` 권한과 사용자 단위 동시 차감 직렬화
+- 새로고침 후 로그인 계정의 열린 기록 복원
+- Supabase `before_life` 프로젝트에 계정별 unlock 스키마 배포
 
 ## 주요 파일
 - `src/app/page.tsx`: 모바일 랜딩
@@ -53,8 +59,8 @@ npm run dev
 
 ## 검증 결과
 ```bash
-npm run test
-# 53 test files, 99 tests passed, 1 integration test skipped without credentials
+npm run test -- --run
+# 81 test files / 164 tests passed, 1 integration test skipped without credentials
 
 npm run build
 # production build passed
@@ -69,11 +75,12 @@ npm run lint
 - 실제 입력 JSON은 서버 검증을 거친다. 닉네임, 날짜, 시간, 답변 ID가 유효하지 않으면 요청을 거부한다.
 - `SUPABASE_URL`과 `SUPABASE_SERVICE_ROLE_KEY`를 함께 설정하고 migration을 적용하면 결과가 영속 저장된다. 둘 다 없을 때만 로컬 memory 저장소를 사용한다.
 - `analytics_events` 테이블은 준비됐지만 analytics API는 아직 memory 저장소를 사용한다.
-- 무료 결과는 deterministic local writer가 생성한다. 유료 장문용 OpenAI 서버 provider는 Responses API, Structured Outputs, 로컬 검증, 실패 시 1회 교정까지 구현했지만 결제·unlock 경로에는 아직 연결하지 않았다.
+- 무료 결과는 deterministic local writer가 생성한다. 유료 장문은 로그인 계정의 unlock 시점에 OpenAI 서버 provider로 생성하고 결정적 generation key로 캐시한다.
+- 콘텐츠 캐시는 동일 입력에서 재사용하지만, 열람 권한은 계정별 행으로 분리해 다른 계정이나 공유 토큰 조회자에게 유료 본문을 노출하지 않는다.
 - `npm audit --omit=dev --strict-ssl=false` 결과 Next 15 계열 하위 의존성에서 high 취약점이 보고됐다. 자동 수정은 Next 16 breaking upgrade를 요구하므로, 운영 배포 전 Next/ESLint 업그레이드 계획을 별도 작업으로 처리해야 한다.
 
 ## 다음 단계
-1. 실제 Supabase 프로젝트에 migration 적용 및 재시작·접근권한 수동 검증
+1. 실제 계정 2개로 로그인→충전→unlock→새로고침, 동시 요청 1회 차감, 교차 계정/공유 토큰 격리를 수동 검증
 2. analytics event Supabase 저장 연결
 3. 실제 모바일 브라우저 E2E 테스트
 4. archetype·문장 풀에 대한 실제 사용자 결과 품질 검증

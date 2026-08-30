@@ -48,6 +48,19 @@ describe("ResultView", () => {
             },
           }), { status: 200, headers: { "Content-Type": "application/json" } }));
         }
+        if (String(input).includes("/api/soul/unlock")) {
+          return Promise.resolve(new Response(JSON.stringify({
+            contentType: "last_day",
+            balance: 2,
+            content: {
+              title: "끝까지 남은 편지",
+              opening: "마지막 아침, 한 통의 편지를 남겼습니다.",
+              chapters: [{ title: "작별", paragraphs: ["끝내 하지 못한 말을 적었습니다."] }],
+              presentMeaning: "지금도 진심을 미루지 않으려는 마음으로 남았습니다.",
+              readingTimeMinutes: 4,
+            },
+          }), { status: 200, headers: { "Content-Type": "application/json" } }));
+        }
         return Promise.resolve(
           new Response(
             JSON.stringify({
@@ -179,6 +192,13 @@ describe("ResultView", () => {
     const lockedRecord = screen.getByText("전생의 마지막 날");
     expect(freeRecordLabel.compareDocumentPosition(wholeLifeOffer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(wholeLifeOffer.compareDocumentPosition(lockedRecord) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /이 기록 열기 · 1소울/ }));
+    expect(await screen.findByText("끝까지 남은 편지")).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledWith("/api/soul/unlock", expect.objectContaining({
+      method: "POST",
+      body: JSON.stringify({ profileId: "sp_test", contentType: "last_day" }),
+    }));
 
     fireEvent.click(previewButton);
     expect(await screen.findByText("돌아오는 길의 지도")).toBeInTheDocument();

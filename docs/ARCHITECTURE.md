@@ -138,6 +138,8 @@ birth_date + optional birth_time
 - 결과 조회에는 긴 `result_token`을 요구한다.
 - 서버 저장소에는 token 원문이 아니라 hash를 저장한다.
 - 결제와 unlock은 Phase 2에서 로그인 사용자 기준으로만 허용한다.
+- 생성된 유료 콘텐츠 본문은 결정적 캐시로 공유하지만, 잠금 해제 권한은 `user_id + soul_profile_id + content_type` 단위의 별도 행으로 저장한다.
+- 결과 API는 공유 캐시의 `is_unlocked` 값을 권한으로 사용하지 않고 로그인 계정의 잠금 해제 권한만 반환한다.
 
 ## Supabase 영속 저장
 
@@ -145,5 +147,6 @@ birth_date + optional birth_time
 - `soul_hash + input_version + engine_version`으로 프로필 생성을 멱등하게 유지한다.
 - 프로필 소유권은 프로필 JSON 배열이 아니라 `soul_profile_access`의 독립 행으로 저장한다.
 - 콘텐츠 캐시는 `soul_profile_id + content_type + generation_key`로 재사용한다.
+- 유료 콘텐츠 권한은 `soul_content_unlocks`에서 계정별로 관리하고 사용자 단위 DB 잠금으로 동시 차감을 직렬화한다.
 - Supabase URL과 service role key는 repository provider가 서버 환경에서만 읽는다.
 - 실제 프로젝트 설정과 연결 검증 절차는 `docs/SUPABASE_SETUP.md`를 따른다.

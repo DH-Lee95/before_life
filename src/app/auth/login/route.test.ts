@@ -9,6 +9,7 @@ describe("Kakao login route", () => {
   it("starts Kakao OAuth with an allow-listed local callback", async () => {
     const response = await GET(new Request("https://before-life.vercel.app/auth/login?next=%2Fresult%2Fsp_test"));
     expect(response.headers.get("location")).toBe("https://kauth.kakao.com/oauth");
+    expect(response.headers.get("set-cookie")).toContain("auth_return_path=%2Fresult%2Fsp_test");
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: "kakao",
       options: { redirectTo: "https://before-life.vercel.app/auth/callback?next=%2Fresult%2Fsp_test" },

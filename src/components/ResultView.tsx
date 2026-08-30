@@ -8,11 +8,12 @@ import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, Refre
 import { contentCosts, referralReward, soulPacks } from "@/config/pricing";
 import { AccountStatus } from "@/components/auth/AccountStatus";
 import { asIdentity } from "@/lib/content/koreanGrammar";
-import type { DeepDiveRecord, FreeResultContent, PublicSoulProfile, SoulContent, WholeLifeNarrative } from "@/types/soul";
+import type { DeepDiveRecord, FreeResultContent, LockedContentType, PublicSoulProfile, SoulContent, StoryNarrative, WholeLifeNarrative } from "@/types/soul";
 
 type ResultPayload = {
   profile: PublicSoulProfile;
   freeContent: SoulContent;
+  unlockedContents?: SoulContent[];
 };
 
 type ResultViewProps = {
@@ -49,6 +50,8 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   const [purchasingPackId, setPurchasingPackId] = useState("");
   const [inviteMessage, setInviteMessage] = useState("");
   const [wholeLifePreview, setWholeLifePreview] = useState<WholeLifeNarrative | null>(null);
+  const [openedRecords, setOpenedRecords] = useState<Partial<Record<LockedContentType, StoryNarrative>>>({});
+  const [unlockingContentType, setUnlockingContentType] = useState("");
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">("idle");
   const [previewMessage, setPreviewMessage] = useState("");
 
@@ -69,6 +72,15 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         if (isMounted) {
           cleanLegacyTokenFromAddress(profileId);
           setPayload(data);
+          const restoredRecords: Partial<Record<LockedContentType, StoryNarrative>> = {};
+          for (const unlocked of data.unlockedContents ?? []) {
+            if (unlocked.contentType === "whole_life") {
+              setWholeLifePreview(unlocked.content as WholeLifeNarrative);
+            } else if (unlocked.contentType !== "free_summary") {
+              restoredRecords[unlocked.contentType] = unlocked.content as StoryNarrative;
+            }
+          }
+          setOpenedRecords(restoredRecords);
           trackEvent("view_free_result", profileId);
         }
       } catch {
@@ -138,7 +150,47 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   function showPurchase(contentType?: string) {
     setPurchaseMessage("원하는 소울 묶음을 선택해 결제를 진행해주세요.");
     trackEvent(contentType ? "click_locked_content" : "view_payment", profileId, contentType);
-    document.getElementById("deep-archive-offer")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const offer = document.getElementById("deep-archive-offer");
+    if (offer && typeof offer.scrollIntoView === "function") {
+      offer.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
+  async function unlockContent(contentType: "whole_life" | LockedContentType) {
+    try {
+      setUnlockingContentType(contentType);
+      setPurchaseMessage("기록을 복원하고 있어요…");
+      const response = await fetch("/api/soul/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId, contentType }),
+      });
+      const data = await response.json() as {
+        content?: StoryNarrative | WholeLifeNarrative;
+        code?: string;
+        message?: string;
+        balance?: number;
+      };
+      if (response.status === 401 && data.code === "AUTH_REQUIRED") {
+        router.push(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+        return;
+      }
+      if (response.status === 402 && data.code === "INSUFFICIENT_SOUL") {
+        setPurchaseMessage(data.message ?? "소울이 부족합니다. 아래에서 필요한 만큼 충전해주세요.");
+        showPurchase(contentType);
+        return;
+      }
+      if (!response.ok || !data.content) throw new Error(data.message ?? "기록을 열지 못했습니다.");
+
+      if (contentType === "whole_life") setWholeLifePreview(data.content as WholeLifeNarrative);
+      else setOpenedRecords((records) => ({ ...records, [contentType]: data.content as StoryNarrative }));
+      setPurchaseMessage(`기록을 열었습니다. 남은 소울은 ${data.balance ?? 0}개입니다.`);
+      trackEvent("unlock_content", profileId, contentType);
+    } catch (error) {
+      setPurchaseMessage(error instanceof Error ? error.message : "기록을 열지 못했습니다.");
+    } finally {
+      setUnlockingContentType("");
+    }
   }
 
   async function purchasePack(packId: string) {
@@ -277,8 +329,8 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
               </li>
             ))}
           </ol>
-          <button type="button" onClick={() => showPurchase("whole_life")} className="mt-5 h-11 w-full rounded-lg bg-archive-text text-sm font-semibold text-archive-bg">
-            전생의 일생 열기 · {contentCosts.wholeLife}소울
+          <button type="button" disabled={Boolean(unlockingContentType)} onClick={() => void unlockContent("whole_life")} className="mt-5 h-11 w-full rounded-lg bg-archive-text text-sm font-semibold text-archive-bg disabled:cursor-wait disabled:opacity-60">
+            {unlockingContentType === "whole_life" ? "전생의 일생 복원 중…" : `전생의 일생 열기 · ${contentCosts.wholeLife}소울`}
           </button>
           {process.env.NODE_ENV !== "production" ? (
             <div className="mt-3 rounded-lg border border-dashed border-archive-rose/40 bg-archive-rose/5 p-3">
@@ -305,7 +357,12 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         </div>
         <p className="mt-3 text-sm leading-6 text-archive-body">전체 생애보다 궁금한 한 장면이 있다면 사랑, 재산, 마지막 날처럼 원하는 주제만 골라 열 수 있습니다.</p>
         <div className="mt-5 space-y-3">
-          {lockedRecords.map((record) => <LockedRecord key={record.id} record={record} onOpen={() => showPurchase(record.id)} />)}
+          {lockedRecords.map((record) => {
+            const opened = openedRecords[record.id];
+            return opened
+              ? <UnlockedRecord key={record.id} record={{ ...opened, id: record.id, isUnlocked: true }} />
+              : <LockedRecord key={record.id} record={record} disabled={Boolean(unlockingContentType)} opening={unlockingContentType === record.id} onOpen={() => void unlockContent(record.id)} />;
+          })}
         </div>
       </section>
 
@@ -408,7 +465,7 @@ function UnlockedRecord({ record }: { record: Extract<DeepDiveRecord, { isUnlock
   );
 }
 
-function LockedRecord({ record, onOpen }: { record: Extract<DeepDiveRecord, { isUnlocked: false }>; onOpen: () => void }) {
+function LockedRecord({ record, disabled, opening, onOpen }: { record: Extract<DeepDiveRecord, { isUnlocked: false }>; disabled: boolean; opening: boolean; onOpen: () => void }) {
   return (
     <article className="rounded-lg border border-archive-line bg-archive-panel p-4">
       <div className="flex items-start justify-between gap-4">
@@ -417,7 +474,7 @@ function LockedRecord({ record, onOpen }: { record: Extract<DeepDiveRecord, { is
       </div>
       <p className="mt-3 text-sm leading-6 text-archive-body">{record.preview}</p>
       <p className="mt-2 text-xs leading-5 text-archive-muted">{record.hint}</p>
-      <button type="button" onClick={onOpen} className="mt-4 h-10 w-full rounded-lg border border-archive-line bg-archive-card text-xs font-semibold text-archive-text">이 기록 열기 · {contentCosts.deepRecord}소울</button>
+      <button type="button" disabled={disabled} onClick={onOpen} className="mt-4 h-10 w-full rounded-lg border border-archive-line bg-archive-card text-xs font-semibold text-archive-text disabled:cursor-wait disabled:opacity-60">{opening ? "기록 복원 중…" : `이 기록 열기 · ${contentCosts.deepRecord}소울`}</button>
     </article>
   );
 }
@@ -431,7 +488,7 @@ function InsightCard({ icon, label, text }: { icon: React.ReactNode; label: stri
   );
 }
 
-function trackEvent(name: "view_free_result" | "click_locked_content" | "view_payment" | "share_result", profileId: string, contentType?: string) {
+function trackEvent(name: "view_free_result" | "click_locked_content" | "view_payment" | "unlock_content" | "share_result", profileId: string, contentType?: string) {
   void fetch("/api/analytics", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

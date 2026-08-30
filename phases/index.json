@@ -9,6 +9,11 @@
       "dir": "2-supabase-persistence",
       "status": "completed",
       "summary": "Supabase migration, 비동기 repository, 서버 provider와 접근권한 보안을 구현하고 전체 검증을 통과했다."
+    },
+    {
+      "dir": "3-account-soul-unlock",
+      "status": "blocked",
+      "summary": "계정별 유료 콘텐츠 권한과 잠금 해제를 구현하고 before_life Supabase에 배포했으며, 실계정 2개가 필요한 교차 계정·동시 차감 E2E만 남았다."
     }
   ]
 }
