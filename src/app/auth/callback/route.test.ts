@@ -45,6 +45,6 @@ describe("Kakao callback route", () => {
 
     const response = await GET(new Request("https://before-life.vercel.app/auth/callback?error=access_denied"));
 
-    expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test?auth=failed");
+    expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test?auth=failed&reason=provider");
   });
 });

@@ -24,6 +24,83 @@ describe("ResultView", () => {
     expect(screen.getByText("전생 서랍을 여는 중")).toBeInTheDocument();
   });
 
+  it("requires Kakao login before requesting a locked record or a soul purchase", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          profile: {
+            displaySoulId: "S-TEST",
+            discoveryPercent: 17,
+            natureSummary: {
+              headline: "당신은 중요한 마음을 오래 품는 사람입니다.",
+              signals: ["중요한 마음을 간직하는 편"],
+              pastLifeBridge: "첫 번째 서랍에 남아 있습니다.",
+            },
+          },
+          account: { authenticated: false, balance: 0 },
+          freeContent: {
+            content: {
+              title: "전생 서랍",
+              summary: "첫 번째 기록",
+              natureSummary: {
+                headline: "당신은 중요한 마음을 오래 품는 사람입니다.",
+                signals: ["중요한 마음을 간직하는 편"],
+                detail: "중요한 마음을 오래 품습니다.",
+                hiddenInstinct: "의미를 찾습니다.",
+                attractionPattern: "조용한 자신감에 끌립니다.",
+                taste: "오래 남는 것을 좋아합니다.",
+                pastLifeBridge: "첫 번째 서랍에 남아 있습니다.",
+              },
+              sections: {
+                location: "오래된 서재",
+                occupation: "편지 대필가",
+                atmosphere: "조용한 기록",
+                love: "신뢰가 중요합니다.",
+                success: "꾸준함에서 옵니다.",
+                compatibility: "편안한 사람입니다.",
+                preference: "오래 남는 것입니다.",
+                wholeLife: {
+                  id: "whole_life",
+                  title: "한 사람의 생애로 읽는 전생",
+                  description: "한 생애를 이어 읽습니다.",
+                  chapterPreviews: [],
+                  readingTimeMinutes: 10,
+                  soulCost: 2,
+                  isUnlocked: false,
+                },
+                records: [{
+                  id: "past_love",
+                  title: "전생의 사랑",
+                  hint: "사랑의 기록",
+                  preview: "두 사람의 이야기",
+                  readingTimeMinutes: 4,
+                  isUnlocked: false,
+                }],
+              },
+            },
+          },
+        }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.mocked(window.confirm).mockReturnValue(false);
+
+    render(<ResultView profileId="sp_test" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /이 기록 열기 · 1소울/ }));
+    expect(window.confirm).toHaveBeenLastCalledWith("유료 콘텐츠를 이용하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?");
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/soul/unlock"))).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: /3소울/ }));
+    expect(window.confirm).toHaveBeenLastCalledWith("소울을 충전하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?");
+    expect(window.confirm).not.toHaveBeenCalledWith("3소울을 2,490원에 충전하시겠습니까?");
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/payment/intents"))).toBe(false);
+  });
+
   it("reveals the representative life before traits and shows one free record", async () => {
     vi.stubGlobal(
       "fetch",

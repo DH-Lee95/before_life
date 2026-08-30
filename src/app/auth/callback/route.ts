@@ -13,25 +13,32 @@ export async function GET(request: Request) {
   );
   const response = NextResponse.redirect(new URL(next, requestUrl.origin));
   const code = requestUrl.searchParams.get("code");
-  if (!code) return authFailure(response, requestUrl, next);
+  if (!code) return authFailure(response, requestUrl, next, "provider");
   const supabase = await createSupabaseServerClient(response);
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return authFailure(response, requestUrl, next);
+  if (error) return authFailure(response, requestUrl, next, "exchange");
   const { data } = await supabase.auth.getUser();
-  if (!data.user) return authFailure(response, requestUrl, next);
+  if (!data.user) return authFailure(response, requestUrl, next, "account");
   let anonymousSessionId = cookieStore.get(ANONYMOUS_SESSION_COOKIE)?.value;
   if (!anonymousSessionId) {
     anonymousSessionId = createAnonymousSessionId();
     cookieStore.set(ANONYMOUS_SESSION_COOKIE, anonymousSessionId, anonymousSessionCookieOptions());
+    response.cookies.set(ANONYMOUS_SESSION_COOKIE, anonymousSessionId, anonymousSessionCookieOptions());
   }
-  await getAccountRepository().claimSession(anonymousSessionId, data.user.id);
+  try {
+    await getAccountRepository().claimSession(anonymousSessionId, data.user.id);
+  } catch {
+    return authFailure(response, requestUrl, next, "session");
+  }
   response.cookies.delete("auth_return_path");
+  response.headers.set("Cache-Control", "private, no-store");
   return response;
 }
 
-function authFailure(response: NextResponse, requestUrl: URL, next: string) {
+function authFailure(response: NextResponse, requestUrl: URL, next: string, reason: "provider" | "exchange" | "account" | "session") {
   const returnUrl = new URL(next, requestUrl.origin);
   returnUrl.searchParams.set("auth", "failed");
+  returnUrl.searchParams.set("reason", reason);
   response.headers.set("location", returnUrl.toString());
   response.headers.set("Cache-Control", "private, no-store");
   return response;

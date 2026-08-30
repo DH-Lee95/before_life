@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
 
-import { contentCosts, referralReward, soulPacks } from "@/config/pricing";
+import { contentCosts, referralReward, soulPacks, type SoulPack } from "@/config/pricing";
 import { asIdentity } from "@/lib/content/koreanGrammar";
 import { clearPendingResultAction, readPendingResultAction, savePendingResultAction } from "@/lib/auth/pendingResultAction";
 import type { DeepDiveRecord, FreeResultContent, LockedContentType, PublicSoulProfile, SoulContent, StoryNarrative, WholeLifeNarrative } from "@/types/soul";
@@ -83,8 +83,9 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
             }
           }
           setOpenedRecords(restoredRecords);
-          if (new URL(window.location.href).searchParams.get("auth") === "failed") {
-            setPurchaseMessage("카카오 로그인을 완료하지 못했습니다. 다시 한 번 시도해주세요.");
+          const currentUrl = new URL(window.location.href);
+          if (currentUrl.searchParams.get("auth") === "failed") {
+            setPurchaseMessage(authFailureMessage(currentUrl.searchParams.get("reason")));
           }
           trackEvent("view_free_result", profileId);
         }
@@ -117,7 +118,11 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
     if (!pending) return;
     resumedAction.current = true;
     if (pending.kind === "unlock") void unlockContent(pending.contentType);
-    else void purchasePack(pending.packId);
+    else {
+      const pack = soulPacks.find((candidate) => candidate.id === pending.packId);
+      if (pack) requestPurchase(pack);
+      else clearPendingResultAction(profileId);
+    }
     // The action functions intentionally use the latest loaded result state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload?.account.authenticated, profileId]);
@@ -172,7 +177,24 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
     }
   }
 
+  function requireKakaoLogin(
+    action: Parameters<typeof savePendingResultAction>[1],
+    message: string,
+  ) {
+    if (!window.confirm(message)) return;
+    savePendingResultAction(profileId, action);
+    setPurchaseMessage("카카오 로그인으로 이동하고 있어요…");
+    window.location.assign(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+  }
+
   async function unlockContent(contentType: "whole_life" | LockedContentType) {
+    if (!payload?.account.authenticated) {
+      requireKakaoLogin(
+        { kind: "unlock", contentType },
+        "유료 콘텐츠를 이용하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?",
+      );
+      return;
+    }
     try {
       setUnlockingContentType(contentType);
       setPurchaseMessage("기록을 복원하고 있어요…");
@@ -188,8 +210,10 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         balance?: number;
       };
       if (response.status === 401 && data.code === "AUTH_REQUIRED") {
-        savePendingResultAction(profileId, { kind: "unlock", contentType });
-        window.location.assign(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+        requireKakaoLogin(
+          { kind: "unlock", contentType },
+          "로그인 상태가 만료됐습니다. 카카오로 다시 로그인하시겠습니까?",
+        );
         return;
       }
       if (response.status === 402 && data.code === "INSUFFICIENT_SOUL") {
@@ -216,6 +240,19 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
     }
   }
 
+  function requestPurchase(pack: SoulPack) {
+    if (!payload?.account.authenticated) {
+      requireKakaoLogin(
+        { kind: "purchase", packId: pack.id },
+        "소울을 충전하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?",
+      );
+      return;
+    }
+    if (window.confirm(`${pack.souls}소울을 ${pack.priceKrw.toLocaleString("ko-KR")}원에 충전하시겠습니까?`)) {
+      void purchasePack(pack.id);
+    }
+  }
+
   async function purchasePack(packId: string) {
     try {
       setPurchasingPackId(packId);
@@ -231,8 +268,10 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       });
       const data = await response.json() as { orderId?: string; message?: string; code?: string };
       if (response.status === 401 && data.code === "AUTH_REQUIRED") {
-        savePendingResultAction(profileId, { kind: "purchase", packId });
-        window.location.assign(`/auth/login?next=${encodeURIComponent(`/result/${profileId}`)}`);
+        requireKakaoLogin(
+          { kind: "purchase", packId },
+          "로그인 상태가 만료됐습니다. 카카오로 다시 로그인하시겠습니까?",
+        );
         return;
       }
       if (!response.ok || !data.orderId) throw new Error(data.message ?? "결제를 준비하지 못했습니다.");
@@ -413,11 +452,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
               key={pack.id}
               type="button"
               disabled={Boolean(purchasingPackId)}
-              onClick={() => {
-                if (window.confirm(`${pack.souls}소울을 ${pack.priceKrw.toLocaleString("ko-KR")}원에 충전하시겠습니까?`)) {
-                  void purchasePack(pack.id);
-                }
-              }}
+              onClick={() => requestPurchase(pack)}
               className={`relative rounded-lg border p-4 text-left disabled:cursor-wait disabled:opacity-60 ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}
             >
               {pack.badge ? <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pack.souls === 7 ? "bg-archive-rose/15 text-archive-rose" : "bg-archive-bg/10 text-archive-card"}`}>{pack.badge}</span> : null}
@@ -537,4 +572,12 @@ function trackEvent(name: "view_free_result" | "click_locked_content" | "view_pa
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, profileId, ...(contentType ? { contentType } : {}) }),
   }).catch(() => undefined);
+}
+
+function authFailureMessage(reason: string | null) {
+  if (reason === "provider") return "카카오 로그인이 취소됐거나 인증 정보를 받지 못했습니다. 다시 시도해주세요.";
+  if (reason === "exchange") return "카카오 인증을 앱 로그인으로 연결하지 못했습니다. 다시 시도해주세요.";
+  if (reason === "account") return "카카오 계정 정보를 확인하지 못했습니다. 다시 시도해주세요.";
+  if (reason === "session") return "로그인은 됐지만 현재 결과와 계정을 연결하지 못했습니다. 다시 시도해주세요.";
+  return "카카오 로그인을 완료하지 못했습니다. 다시 한 번 시도해주세요.";
 }
