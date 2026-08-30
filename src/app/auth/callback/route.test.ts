@@ -1,17 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const cookieSet = vi.hoisted(() => vi.fn());
 const claimSession = vi.hoisted(() => vi.fn(async () => ({ claimed: true })));
 const cookieGet = vi.hoisted(() => vi.fn((name: string) => name === "anonymous_session_id" ? { value: "anon_owner" } : undefined));
+const exchangeCodeForSession = vi.hoisted(() => vi.fn(async () => ({
+  data: { user: { id: "user-id" } },
+  error: null,
+})));
+const getUser = vi.hoisted(() => vi.fn(async () => {
+  throw new Error("callback should use the verified exchange response");
+}));
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({ get: cookieGet, getAll: () => [], set: cookieSet })) }));
 vi.mock("@/lib/auth/serverClient", () => ({
   createSupabaseServerClient: async (response?: { cookies: { set: (name: string, value: string, options: { path: string }) => unknown }; headers: { set: (name: string, value: string) => unknown } }) => {
     response?.cookies.set("sb-project-auth-token", "session", { path: "/" });
     response?.headers.set("Cache-Control", "private, no-store");
     return ({ auth: {
-    exchangeCodeForSession: vi.fn(async () => ({ error: null })),
-    getUser: vi.fn(async () => ({ data: { user: { id: "user-id" } } })),
-  } });
+      exchangeCodeForSession,
+      getUser,
+    } });
   },
 }));
 vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ claimSession }) }));
@@ -19,8 +26,17 @@ vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ 
 import { GET } from "./route";
 
 describe("Kakao callback route", () => {
+  beforeEach(() => {
+    cookieGet.mockImplementation((name: string) => name === "anonymous_session_id" ? { value: "anon_owner" } : undefined);
+    exchangeCodeForSession.mockResolvedValue({ data: { user: { id: "user-id" } }, error: null });
+    claimSession.mockClear();
+    getUser.mockClear();
+  });
+
   it("claims the existing anonymous data and returns to the requested page", async () => {
     const response = await GET(new Request("https://before-life.vercel.app/auth/callback?code=oauth-code&next=%2Fresult%2Fsp_test"));
+    expect(exchangeCodeForSession).toHaveBeenCalledWith("oauth-code");
+    expect(getUser).not.toHaveBeenCalled();
     expect(claimSession).toHaveBeenCalledWith("anon_owner", "user-id");
     expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
@@ -46,5 +62,17 @@ describe("Kakao callback route", () => {
     const response = await GET(new Request("https://before-life.vercel.app/auth/callback?error=access_denied"));
 
     expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test?auth=failed&reason=provider");
+  });
+
+  it("reports a failed code exchange without pretending the account is logged in", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { user: null },
+      error: { message: "PKCE verifier did not match" },
+    });
+
+    const response = await GET(new Request("https://before-life.vercel.app/auth/callback?code=oauth-code&next=%2Fresult%2Fsp_test"));
+
+    expect(claimSession).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test?auth=failed&reason=exchange");
   });
 });

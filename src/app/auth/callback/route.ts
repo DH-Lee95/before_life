@@ -13,12 +13,21 @@ export async function GET(request: Request) {
   );
   const response = NextResponse.redirect(new URL(next, requestUrl.origin));
   const code = requestUrl.searchParams.get("code");
-  if (!code) return authFailure(response, requestUrl, next, "provider");
+  if (!code) {
+    reportAuthFailure("provider", requestUrl.searchParams.get("error"));
+    return authFailure(response, requestUrl, next, "provider");
+  }
   const supabase = await createSupabaseServerClient(response);
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return authFailure(response, requestUrl, next, "exchange");
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) return authFailure(response, requestUrl, next, "account");
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  if (error) {
+    reportAuthFailure("exchange", error.code);
+    return authFailure(response, requestUrl, next, "exchange");
+  }
+  const user = data.user ?? data.session?.user;
+  if (!user) {
+    reportAuthFailure("account");
+    return authFailure(response, requestUrl, next, "account");
+  }
   let anonymousSessionId = cookieStore.get(ANONYMOUS_SESSION_COOKIE)?.value;
   if (!anonymousSessionId) {
     anonymousSessionId = createAnonymousSessionId();
@@ -26,13 +35,19 @@ export async function GET(request: Request) {
     response.cookies.set(ANONYMOUS_SESSION_COOKIE, anonymousSessionId, anonymousSessionCookieOptions());
   }
   try {
-    await getAccountRepository().claimSession(anonymousSessionId, data.user.id);
-  } catch {
+    await getAccountRepository().claimSession(anonymousSessionId, user.id);
+  } catch (error) {
+    reportAuthFailure("session", error instanceof Error ? error.name : undefined);
     return authFailure(response, requestUrl, next, "session");
   }
   response.cookies.delete("auth_return_path");
   response.headers.set("Cache-Control", "private, no-store");
   return response;
+}
+
+function reportAuthFailure(reason: "provider" | "exchange" | "account" | "session", code?: string | null) {
+  const safeCode = code && /^[A-Za-z0-9_-]{1,80}$/.test(code) ? code : undefined;
+  console.error("[kakao-auth] callback failed", { reason, ...(safeCode ? { code: safeCode } : {}) });
 }
 
 function authFailure(response: NextResponse, requestUrl: URL, next: string, reason: "provider" | "exchange" | "account" | "session") {

@@ -45,6 +45,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   const router = useRouter();
   const [payload, setPayload] = useState<ResultPayload | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [authErrorMessage, setAuthErrorMessage] = useState("");
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [shareMessage, setShareMessage] = useState("");
   const [purchaseMessage, setPurchaseMessage] = useState("");
@@ -85,7 +86,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
           setOpenedRecords(restoredRecords);
           const currentUrl = new URL(window.location.href);
           if (currentUrl.searchParams.get("auth") === "failed") {
-            setPurchaseMessage(authFailureMessage(currentUrl.searchParams.get("reason")));
+            setAuthErrorMessage(authFailureMessage(currentUrl.searchParams.get("reason")));
           }
           trackEvent("view_free_result", profileId);
         }
@@ -325,11 +326,14 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
 
   return (
     <section className="space-y-6 pb-8">
-      <header className="flex items-center justify-between gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="inline-flex items-center gap-2 text-sm text-archive-muted">
           <Archive className="h-4 w-4 text-archive-rose" aria-hidden /> 전생 서랍
         </Link>
         <div className="flex items-center gap-2">
+          <span className={`rounded-full px-3 py-2 text-xs font-semibold ${payload.account.authenticated ? "bg-archive-green/15 text-archive-green" : "border border-archive-line bg-archive-panel text-archive-muted"}`}>
+            {payload.account.authenticated ? "카카오 로그인됨" : "카카오 로그인 필요"}
+          </span>
           {payload.account.authenticated ? (
             <span className="rounded-full bg-archive-rose/10 px-3 py-2 text-xs font-semibold text-archive-rose">{payload.account.balance}소울 보유</span>
           ) : null}
@@ -338,6 +342,11 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
           </button>
         </div>
       </header>
+      {authErrorMessage ? (
+        <div role="alert" className="rounded-lg border border-archive-rose/35 bg-archive-rose/5 px-4 py-3 text-sm leading-6 text-archive-rose">
+          {authErrorMessage}
+        </div>
+      ) : null}
       {shareMessage ? <p className="text-right text-xs text-archive-muted" aria-live="polite">{shareMessage}</p> : null}
 
       <article className="relative overflow-hidden rounded-2xl bg-archive-text p-6 text-archive-bg shadow-[0_18px_45px_rgba(46,36,24,0.18)]">
@@ -575,6 +584,7 @@ function trackEvent(name: "view_free_result" | "click_locked_content" | "view_pa
 }
 
 function authFailureMessage(reason: string | null) {
+  if (reason === "start") return "카카오 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해주세요.";
   if (reason === "provider") return "카카오 로그인이 취소됐거나 인증 정보를 받지 못했습니다. 다시 시도해주세요.";
   if (reason === "exchange") return "카카오 인증을 앱 로그인으로 연결하지 못했습니다. 다시 시도해주세요.";
   if (reason === "account") return "카카오 계정 정보를 확인하지 못했습니다. 다시 시도해주세요.";

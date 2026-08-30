@@ -20,7 +20,10 @@ describe("Kakao login route", () => {
     expect(response.headers.get("set-cookie")).toContain("auth_return_path=%2Fresult%2Fsp_test");
     expect(signInWithOAuth).toHaveBeenCalledWith({
       provider: "kakao",
-      options: { redirectTo: "https://before-life.vercel.app/auth/callback" },
+      options: {
+        redirectTo: "https://before-life.vercel.app/auth/callback",
+        queryParams: { prompt: "login" },
+      },
     });
   });
 });

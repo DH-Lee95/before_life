@@ -88,9 +88,12 @@ describe("ResultView", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     vi.mocked(window.confirm).mockReturnValue(false);
+    window.history.replaceState(null, "", "/result/sp_test?auth=failed&reason=exchange");
 
     render(<ResultView profileId="sp_test" />);
 
+    expect(await screen.findByText("카카오 로그인 필요")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("카카오 인증을 앱 로그인으로 연결하지 못했습니다.");
     fireEvent.click(await screen.findByRole("button", { name: /이 기록 열기 · 1소울/ }));
     expect(window.confirm).toHaveBeenLastCalledWith("유료 콘텐츠를 이용하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?");
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/soul/unlock"))).toBe(false);
@@ -234,6 +237,7 @@ describe("ResultView", () => {
     expect(sessionStorage.getItem("soul:result-token:sp_test")).toBe("shared_token");
     expect(screen.getByText(/첫 번째 서랍/)).toBeInTheDocument();
     expect(screen.getAllByText("4소울 보유")).not.toHaveLength(0);
+    expect(screen.getByText("카카오 로그인됨")).toBeInTheDocument();
     const representative = screen.getByText("대표 전생 기록");
     const nature = screen.getByText("생년월일 기반 성향");
     expect(representative.compareDocumentPosition(nature) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
