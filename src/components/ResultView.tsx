@@ -409,7 +409,17 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3">
           {soulPacks.map((pack) => (
-            <button key={pack.id} type="button" disabled={Boolean(purchasingPackId)} onClick={() => void purchasePack(pack.id)} className={`relative rounded-lg border p-4 text-left disabled:cursor-wait disabled:opacity-60 ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}>
+            <button
+              key={pack.id}
+              type="button"
+              disabled={Boolean(purchasingPackId)}
+              onClick={() => {
+                if (window.confirm(`${pack.souls}소울을 ${pack.priceKrw.toLocaleString("ko-KR")}원에 충전하시겠습니까?`)) {
+                  void purchasePack(pack.id);
+                }
+              }}
+              className={`relative rounded-lg border p-4 text-left disabled:cursor-wait disabled:opacity-60 ${pack.souls === 7 ? "border-archive-card bg-archive-bg text-archive-text" : "border-archive-bg/15 bg-archive-bg/5 text-archive-bg"}`}
+            >
               {pack.badge ? <span className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${pack.souls === 7 ? "bg-archive-rose/15 text-archive-rose" : "bg-archive-bg/10 text-archive-card"}`}>{pack.badge}</span> : null}
               <strong className="block text-lg">{pack.souls}소울</strong>
               <span className={`mt-1 block text-sm ${pack.souls === 7 ? "text-archive-body" : "text-archive-bg/65"}`}>{pack.priceKrw.toLocaleString("ko-KR")}원</span>

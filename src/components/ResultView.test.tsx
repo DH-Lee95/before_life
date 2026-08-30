@@ -11,6 +11,7 @@ describe("ResultView", () => {
     routerPush.mockReset();
     sessionStorage.clear();
     window.history.replaceState(null, "", "/");
+    vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.stubGlobal(
       "fetch",
       vi.fn(() => new Promise(() => undefined)),
@@ -181,6 +182,7 @@ describe("ResultView", () => {
     expect(screen.getByRole("button", { name: /결과 공유/ })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /3소울/ }));
+    expect(window.confirm).toHaveBeenCalledWith("3소울을 2,490원에 충전하시겠습니까?");
     await screen.findByText("결제 준비 중…");
     expect(fetch).toHaveBeenCalledWith("/api/payment/intents", expect.objectContaining({
       method: "POST",
