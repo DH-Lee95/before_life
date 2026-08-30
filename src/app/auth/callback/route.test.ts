@@ -5,10 +5,14 @@ const claimSession = vi.hoisted(() => vi.fn(async () => ({ claimed: true })));
 const cookieGet = vi.hoisted(() => vi.fn((name: string) => name === "anonymous_session_id" ? { value: "anon_owner" } : undefined));
 vi.mock("next/headers", () => ({ cookies: vi.fn(async () => ({ get: cookieGet, getAll: () => [], set: cookieSet })) }));
 vi.mock("@/lib/auth/serverClient", () => ({
-  createSupabaseServerClient: async () => ({ auth: {
+  createSupabaseServerClient: async (response?: { cookies: { set: (name: string, value: string, options: { path: string }) => unknown }; headers: { set: (name: string, value: string) => unknown } }) => {
+    response?.cookies.set("sb-project-auth-token", "session", { path: "/" });
+    response?.headers.set("Cache-Control", "private, no-store");
+    return ({ auth: {
     exchangeCodeForSession: vi.fn(async () => ({ error: null })),
     getUser: vi.fn(async () => ({ data: { user: { id: "user-id" } } })),
-  } }),
+  } });
+  },
 }));
 vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ claimSession }) }));
 
@@ -19,6 +23,8 @@ describe("Kakao callback route", () => {
     const response = await GET(new Request("https://before-life.vercel.app/auth/callback?code=oauth-code&next=%2Fresult%2Fsp_test"));
     expect(claimSession).toHaveBeenCalledWith("anon_owner", "user-id");
     expect(response.headers.get("location")).toBe("https://before-life.vercel.app/result/sp_test");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(response.headers.get("set-cookie")).toContain("sb-project-auth-token=session");
   });
 
   it("returns to the stored result when the OAuth provider drops the next query", async () => {
