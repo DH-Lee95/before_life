@@ -49,6 +49,39 @@ describe("validateGeneratedStory", () => {
     expect(result.issues).toContain("본문 도입부에 몰입을 깨는 서비스 고지문이 포함되어 있습니다.");
   });
 
+  it("rejects sentences that pile up vague abstract nouns without naming the event", () => {
+    const broken = {
+      ...validStory,
+      chapters: validStory.chapters.map((chapter, index) => index === 2 ? {
+        ...chapter,
+        paragraphs: [
+          "당신은 자신의 고백과 증거를 세상에 남기면 혼란이 생긴다는 것을 알았습니다. 그 사람에게 모든 기록을 건네고 침묵의 대가를 직접 선택하게 했습니다.",
+          chapter.paragraphs[1],
+        ],
+      } : chapter),
+    };
+
+    const result = validateGeneratedStory(broken);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.issues).toContain("설명되지 않은 추상적인 말이 한 문장에 너무 많이 포함되어 있습니다.");
+    expect(createStoryRepairPrompt(broken, result.issues)).toContain("누가 무엇을 했는지");
+  });
+
+  it("rejects a sentence that is too long to read comfortably", () => {
+    const broken = {
+      ...validStory,
+      opening: `당신은 ${"그날 벌어진 일을 떠올리면서도 상대에게 사실을 말하지 못했고 ".repeat(5)}마침내 문을 열었습니다.`,
+    };
+
+    const result = validateGeneratedStory(broken);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.issues).toContain("한 문장이 너무 길어 내용을 한 번에 이해하기 어렵습니다.");
+  });
+
   it("accepts a complete chronological whole-life story", () => {
     const paragraph = "낡은 창문으로 들어온 아침빛 아래에서 당신은 어제의 선택이 오늘의 관계를 어떻게 바꾸었는지 돌아보았습니다. 작은 행동 하나가 다음 계절의 결심으로 이어졌고, 그 기억은 오래도록 삶의 방향을 붙들어 주었습니다. ".repeat(3);
     const wholeLife = {

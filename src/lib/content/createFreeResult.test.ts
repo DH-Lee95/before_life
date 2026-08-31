@@ -57,6 +57,7 @@ describe("createFreeResult", () => {
     expect(content.sections.atmosphere).not.toContain("사람였습니다");
     expect(content.summary).toContain(profile.mainPastLife.occupation);
     const renderedText = JSON.stringify(content);
+    expect(renderedText).not.toMatch(/자신의 고백과 증거|침묵의 대가|모든 기록/);
     expect(renderedText).not.toMatch(/감정의 결|관계의 온도|판을 읽고|자신만의 결/);
     expect(renderedText).not.toMatch(/기록원였던|재봉사이었던|생활으로|마음이라는 감정|약속이라는 감정|내 이름으로 선택|였던 살아가기|의 길로 들어선 계기/);
   });

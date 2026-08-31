@@ -35,6 +35,8 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("익숙하고 직관적인 한국어");
     expect(prompt.user).toContain("상품명은 반복하지 않고");
     expect(prompt.user).toContain("직업에서 파생된 소품과 행동을 반복하지 말 것");
+    expect(prompt.user).toContain("주인공인 쉬운 단편소설");
+    expect(prompt.user).toContain("사건과 사람을 처음 언급할 때 정체를 바로 설명");
     expect(prompt.user).toContain("두 사람의 욕망과 두려움");
     expect(prompt.user).toContain("가까워짐 → 갈등의 폭발 → 되돌릴 수 없는 선택과 여운");
     expect(prompt.user).not.toContain(profile.soulHash);

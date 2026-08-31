@@ -54,6 +54,7 @@ export function validateGeneratedStory(value: unknown): StoryValidationResult {
   if (BROKEN_KOREAN_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("부자연스러운 한국어 결합이 포함되어 있습니다.");
   }
+  issues.push(...findReadabilityIssues(value));
 
   if (issues.length > 0) return { success: false, issues: [...new Set(issues)] };
   return { success: true, data: value as StoryNarrative };
@@ -105,6 +106,7 @@ export function validateGeneratedWholeLife(value: unknown): WholeLifeValidationR
   if (BROKEN_KOREAN_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("부자연스러운 한국어 결합이 포함되어 있습니다.");
   }
+  issues.push(...findReadabilityIssues(value));
 
   if (issues.length > 0) return { success: false, issues: [...new Set(issues)] };
   return { success: true, data: value as WholeLifeNarrative };
@@ -113,6 +115,8 @@ export function validateGeneratedWholeLife(value: unknown): WholeLifeValidationR
 export function createStoryRepairPrompt(value: unknown, issues: string[]): string {
   return `아래 글의 내용과 JSON 구조는 유지하고, 지적된 문제만 고쳐서 완전한 JSON으로 다시 작성하라.
 새로운 인물이나 사건을 추가하지 말고 한국어 조사, 어미, 주어와 서술어의 호응을 자연스럽게 다듬어라.
+누가 무엇을 했는지 바로 이해되게 쓰고, 설명되지 않은 추상어는 원문에 이미 있는 구체적인 사람, 사건, 물건으로 바꿔라.
+긴 문장은 핵심 행동이 하나씩 남도록 두 문장 이상으로 나눠라.
 
 [수정할 문제]
 ${issues.map((issue) => `- ${issue}`).join("\n")}
@@ -144,6 +148,40 @@ function collectNarrativeTextLength(value: Record<string, unknown>): number {
     }
   }
   return texts.join("\n").length;
+}
+
+function findReadabilityIssues(value: Record<string, unknown>): string[] {
+  const issues: string[] = [];
+  const abstractWords = /고백|증거|혼란|기록|진실|대가/g;
+
+  for (const text of collectNarrativeTexts(value)) {
+    const sentences = text.split(/(?<=[.!?])\s*/).filter(Boolean);
+    for (const sentence of sentences) {
+      if (sentence.length > 120) {
+        issues.push("한 문장이 너무 길어 내용을 한 번에 이해하기 어렵습니다.");
+      }
+      if ((sentence.match(abstractWords) ?? []).length >= 3) {
+        issues.push("설명되지 않은 추상적인 말이 한 문장에 너무 많이 포함되어 있습니다.");
+      }
+    }
+  }
+
+  return [...new Set(issues)];
+}
+
+function collectNarrativeTexts(value: Record<string, unknown>): string[] {
+  const texts = [value.title, value.opening, value.presentMeaning]
+    .filter((field): field is string => typeof field === "string");
+  if (!Array.isArray(value.chapters)) return texts;
+
+  for (const chapter of value.chapters) {
+    if (!isRecord(chapter)) continue;
+    if (typeof chapter.title === "string") texts.push(chapter.title);
+    if (Array.isArray(chapter.paragraphs)) {
+      texts.push(...chapter.paragraphs.filter((paragraph): paragraph is string => typeof paragraph === "string"));
+    }
+  }
+  return texts;
 }
 
 function containsStoryDisclosure(opening: string): boolean {
