@@ -155,6 +155,53 @@ describe("ResultView", () => {
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "전생 기록을 여는 중" })).not.toBeInTheDocument());
   });
 
+  it("hides the whole-life unlock button after the whole-life record opens", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify(resultPayload({ balance: 3 })), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        }));
+      }
+      if (String(input).includes("/api/soul/unlock")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          contentType: "whole_life",
+          balance: 1,
+          content: { title: "한 사람의 생애", opening: "첫 장", chapters: [], presentMeaning: "의미", readingTimeMinutes: 10 },
+        }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      }));
+    }));
+
+    render(<ResultView profileId="sp_test" />);
+    fireEvent.click(await screen.findByRole("button", { name: /전생의 일생 열기 · 2소울/ }));
+
+    await screen.findByText("한 사람의 생애");
+    expect(screen.queryByRole("button", { name: /전생의 일생 열기 · 2소울/ })).not.toBeInTheDocument();
+  });
+
+  it("opens the recharge offer without showing the dialog when the balance is insufficient", async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify(resultPayload({ balance: 0 })), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ResultView profileId="sp_test" />);
+    fireEvent.click(await screen.findByRole("button", { name: /전생의 일생 열기 · 2소울/ }));
+
+    expect(await screen.findByText((_, element) => element?.textContent === "2소울이 필요합니다. 아래에서 필요한 만큼 충전해주세요.")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "전생 기록을 여는 중" })).not.toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/soul/unlock"))).toBe(false);
+  });
+
   it("reveals the representative life before traits and shows one free record", async () => {
     vi.stubGlobal(
       "fetch",

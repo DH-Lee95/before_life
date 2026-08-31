@@ -168,8 +168,8 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
     }
   }
 
-  function showPurchase(contentType?: string) {
-    setPurchaseMessage("원하는 소울 묶음을 선택해 결제를 진행해주세요.");
+  function showPurchase(contentType?: string, message = "원하는 소울 묶음을 선택해 결제를 진행해주세요.") {
+    setPurchaseMessage(message);
     trackEvent(contentType ? "click_locked_content" : "view_payment", profileId, contentType);
     const offer = document.getElementById("deep-archive-offer");
     if (offer && typeof offer.scrollIntoView === "function") {
@@ -195,6 +195,12 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       );
       return;
     }
+    const cost = contentType === "whole_life" ? contentCosts.wholeLife : contentCosts.deepRecord;
+    if (payload.account.balance < cost) {
+      clearPendingResultAction(profileId);
+      showPurchase(contentType, `${cost}소울이 필요합니다. 아래에서 필요한 만큼 충전해주세요.`);
+      return;
+    }
     try {
       setUnlockingContentType(contentType);
       setPurchaseMessage("기록을 복원하고 있어요…");
@@ -218,8 +224,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       }
       if (response.status === 402 && data.code === "INSUFFICIENT_SOUL") {
         clearPendingResultAction(profileId);
-        setPurchaseMessage(data.message ?? "소울이 부족합니다. 아래에서 필요한 만큼 충전해주세요.");
-        showPurchase(contentType);
+        showPurchase(contentType, data.message ?? "소울이 부족합니다. 아래에서 필요한 만큼 충전해주세요.");
         return;
       }
       if (!response.ok || !data.content) throw new Error(data.message ?? "기록을 열지 못했습니다.");
@@ -407,9 +412,13 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
               </li>
             ))}
           </ol>
-          <button type="button" disabled={Boolean(unlockingContentType)} onClick={() => void unlockContent("whole_life")} className="mt-5 h-11 w-full rounded-lg bg-archive-text text-sm font-semibold text-archive-bg disabled:cursor-wait disabled:opacity-60">
-            {unlockingContentType === "whole_life" ? "전생의 일생 복원 중…" : `전생의 일생 열기 · ${contentCosts.wholeLife}소울`}
-          </button>
+          {wholeLifePreview ? (
+            <p className="mt-5 rounded-lg bg-archive-green/15 px-4 py-3 text-center text-sm font-semibold text-archive-green">전생의 일생이 열렸어요</p>
+          ) : (
+            <button type="button" disabled={Boolean(unlockingContentType)} onClick={() => void unlockContent("whole_life")} className="mt-5 h-11 w-full rounded-lg bg-archive-text text-sm font-semibold text-archive-bg disabled:cursor-wait disabled:opacity-60">
+              {unlockingContentType === "whole_life" ? "전생의 일생 복원 중…" : `전생의 일생 열기 · ${contentCosts.wholeLife}소울`}
+            </button>
+          )}
           {process.env.NODE_ENV !== "production" ? (
             <div className="mt-3 rounded-lg border border-dashed border-archive-rose/40 bg-archive-rose/5 p-3">
               <p className="text-[11px] leading-5 text-archive-muted">로컬 개발 전용 · 첫 생성에만 실제 OpenAI 비용이 발생하며 이후에는 캐시를 사용합니다.</p>
