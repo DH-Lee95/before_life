@@ -7,11 +7,12 @@ import { contentCosts } from "@/config/pricing";
 import { getAccountRepository } from "@/lib/auth/accountRepository";
 import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { createStoryGenerationPrompt, createWholeLifeGenerationPrompt } from "@/lib/content/createStoryGenerationPrompt";
-import { acquireContentGeneration, releaseContentGeneration, waitForGeneratedContent } from "@/lib/content/contentGenerationLock";
+import { acquireContentGeneration, releaseContentGeneration } from "@/lib/content/contentGenerationLock";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
 import type { LockedContentType, SoulContentType } from "@/types/soul";
 
 export const runtime = "nodejs";
+export const maxDuration = 180;
 
 export async function POST(request: Request) {
   try {
@@ -64,17 +65,21 @@ export async function POST(request: Request) {
             content: generated.content,
             generationKey,
           });
+          const unlocked = await accountRepository.unlockContent(user.id, profileId, contentType, generationKey, cost);
+          return NextResponse.json({ contentType, content: content.content, ...unlocked });
         } finally {
-          await releaseContentGeneration(claim);
+          try {
+            await releaseContentGeneration(claim);
+          } catch (releaseError) {
+            console.error("Failed to release content generation lock", releaseError);
+          }
         }
       } else {
-        content = await waitForGeneratedContent({ repository, soulProfileId: profileId, contentType, generationKey });
-        if (!content) {
-          return NextResponse.json({
-            message: "같은 기록을 다른 요청에서 준비하고 있습니다. 잠시 후 다시 열어주세요.",
-            code: "GENERATION_IN_PROGRESS",
-          }, { status: 409 });
-        }
+        return NextResponse.json({
+          message: "같은 기록을 다른 요청에서 준비하고 있습니다.",
+          code: "GENERATION_IN_PROGRESS",
+          retryAfterMs: 1_500,
+        }, { status: 202, headers: { "Retry-After": "2" } });
       }
     }
 
@@ -85,7 +90,11 @@ export async function POST(request: Request) {
     if (message.includes("insufficient soul balance")) {
       return NextResponse.json({ message: "소울이 부족합니다.", code: "INSUFFICIENT_SOUL" }, { status: 402 });
     }
-    return NextResponse.json({ message }, { status: 502 });
+    console.error("Content unlock failed", error);
+    return NextResponse.json({
+      message: "기록을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.",
+      code: "UNLOCK_FAILED",
+    }, { status: 502 });
   }
 }
 

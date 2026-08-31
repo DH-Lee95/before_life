@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ResultView } from "./ResultView";
 
@@ -7,6 +7,10 @@ const routerPush = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: routerPush }) }));
 
 describe("ResultView", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     routerPush.mockReset();
     sessionStorage.clear();
@@ -153,6 +157,76 @@ describe("ResultView", () => {
     }), { status: 200, headers: { "Content-Type": "application/json" } }));
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "전생 기록을 여는 중" })).not.toBeInTheDocument());
+  });
+
+  it("keeps the drawer-opening dialog open and retries while another request is generating", async () => {
+    let unlockRequests = 0;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify(resultPayload({ balance: 3 })), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        }));
+      }
+      if (String(input).includes("/api/soul/unlock")) {
+        unlockRequests += 1;
+        if (unlockRequests === 1) {
+          return Promise.resolve(new Response(JSON.stringify({
+            code: "GENERATION_IN_PROGRESS",
+            message: "같은 기록을 준비하고 있습니다.",
+          }), { status: 202, headers: { "Content-Type": "application/json" } }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({
+          contentType: "last_day",
+          balance: 2,
+          content: { title: "끝까지 남은 편지", opening: "마지막 아침", chapters: [], presentMeaning: "의미", readingTimeMinutes: 4 },
+        }), { status: 200, headers: { "Content-Type": "application/json" } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      }));
+    }));
+
+    render(<ResultView profileId="sp_test" />);
+    const button = await screen.findByRole("button", { name: /이 기록 열기 · 1소울/ });
+    vi.useFakeTimers();
+    fireEvent.click(button);
+    await act(async () => undefined);
+
+    expect(screen.getByRole("dialog", { name: "전생 기록을 여는 중" })).toHaveTextContent("서랍 속 기록을 계속 복원하고 있어요");
+    expect(unlockRequests).toBe(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
+    vi.useRealTimers();
+
+    expect(await screen.findByText("끝까지 남은 편지")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "전생 기록을 여는 중" })).not.toBeInTheDocument();
+    expect(unlockRequests).toBe(2);
+  });
+
+  it("shows a visible retry dialog when a record cannot be opened", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify(resultPayload({ balance: 3 })), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        }));
+      }
+      if (String(input).includes("/api/soul/unlock")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          code: "UNLOCK_FAILED",
+          message: "기록을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.",
+        }), { status: 502, headers: { "Content-Type": "application/json" } }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      }));
+    }));
+
+    render(<ResultView profileId="sp_test" />);
+    fireEvent.click(await screen.findByRole("button", { name: /이 기록 열기 · 1소울/ }));
+
+    const dialog = await screen.findByRole("dialog", { name: "전생 기록 열기 오류" });
+    expect(dialog).toHaveTextContent("완료되지 않은 요청에는 소울이 차감되지 않습니다.");
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeInTheDocument();
   });
 
   it("hides the whole-life unlock button after the whole-life record opens", async () => {

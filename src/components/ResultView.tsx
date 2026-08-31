@@ -23,6 +23,9 @@ type ResultViewProps = {
 };
 
 const RESULT_TOKEN_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
+const UNLOCK_RETRY_DELAY_MS = 1_500;
+const DEEP_RECORD_WAIT_LIMIT_MS = 150_000;
+const WHOLE_LIFE_WAIT_LIMIT_MS = 210_000;
 
 function getResultToken(profileId: string, legacyToken = ""): string {
   const url = new URL(window.location.href);
@@ -54,6 +57,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   const [wholeLifePreview, setWholeLifePreview] = useState<WholeLifeNarrative | null>(null);
   const [openedRecords, setOpenedRecords] = useState<Partial<Record<LockedContentType, StoryNarrative>>>({});
   const [unlockingContentType, setUnlockingContentType] = useState("");
+  const [unlockError, setUnlockError] = useState<{ contentType: "whole_life" | LockedContentType; message: string } | null>(null);
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">("idle");
   const [previewMessage, setPreviewMessage] = useState("");
 
@@ -202,19 +206,51 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       return;
     }
     try {
+      setUnlockError(null);
       setUnlockingContentType(contentType);
       setPurchaseMessage("기록을 복원하고 있어요…");
-      const response = await fetch("/api/soul/unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId, contentType }),
-      });
-      const data = await response.json() as {
+      const waitLimit = contentType === "whole_life" ? WHOLE_LIFE_WAIT_LIMIT_MS : DEEP_RECORD_WAIT_LIMIT_MS;
+      const deadline = Date.now() + waitLimit;
+      let transientFailures = 0;
+      let response: Response;
+      let data: {
         content?: StoryNarrative | WholeLifeNarrative;
         code?: string;
         message?: string;
         balance?: number;
       };
+
+      while (true) {
+        try {
+          response = await fetch("/api/soul/unlock", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId, contentType }),
+          });
+          data = await response.json().catch(() => ({})) as typeof data;
+        } catch (requestError) {
+          transientFailures += 1;
+          if (transientFailures > 3 || Date.now() >= deadline) throw requestError;
+          setPurchaseMessage("연결을 다시 확인하고 있어요…");
+          await delay(UNLOCK_RETRY_DELAY_MS);
+          continue;
+        }
+
+        const generationInProgress = data.code === "GENERATION_IN_PROGRESS" && (response.status === 202 || response.status === 409);
+        const invocationTimedOut = response.status === 504;
+        if (generationInProgress || invocationTimedOut) {
+          if (Date.now() >= deadline) {
+            throw new Error("기록 복원이 예상보다 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요. 이미 생성된 기록은 다시 만들지 않습니다.");
+          }
+          setPurchaseMessage(contentType === "whole_life"
+            ? "한 생애의 기록을 시간순으로 정리하고 있어요…"
+            : "서랍 속 기록을 계속 복원하고 있어요…");
+          await delay(UNLOCK_RETRY_DELAY_MS);
+          continue;
+        }
+        break;
+      }
+
       if (response.status === 401 && data.code === "AUTH_REQUIRED") {
         requireKakaoLogin(
           { kind: "unlock", contentType },
@@ -239,7 +275,9 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       setPurchaseMessage(`기록을 열었습니다. 남은 소울은 ${data.balance ?? 0}개입니다.`);
       trackEvent("unlock_content", profileId, contentType);
     } catch (error) {
-      setPurchaseMessage(error instanceof Error ? error.message : "기록을 열지 못했습니다.");
+      const message = error instanceof Error ? error.message : "기록을 열지 못했습니다.";
+      setPurchaseMessage(message);
+      setUnlockError({ contentType, message });
     } finally {
       setUnlockingContentType("");
     }
@@ -505,12 +543,24 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       </section>
 
       <p className="text-center text-[11px] leading-5 text-archive-muted">전생 서랍은 AI 기반 엔터테인먼트 스토리텔링 서비스입니다.</p>
-      {unlockingContentType ? <UnlockingDialog /> : null}
+      {unlockingContentType ? <UnlockingDialog contentType={unlockingContentType} statusMessage={purchaseMessage} /> : null}
+      {unlockError ? (
+        <UnlockErrorDialog
+          message={unlockError.message}
+          onClose={() => setUnlockError(null)}
+          onRetry={() => {
+            const contentType = unlockError.contentType;
+            setUnlockError(null);
+            void unlockContent(contentType);
+          }}
+        />
+      ) : null}
     </section>
   );
 }
 
-function UnlockingDialog() {
+function UnlockingDialog({ contentType, statusMessage }: { contentType: string; statusMessage: string }) {
+  const isWholeLife = contentType === "whole_life";
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-archive-text/55 px-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="전생 기록을 여는 중">
       <section className="w-full max-w-sm rounded-2xl border border-archive-card/30 bg-archive-card p-6 text-center text-archive-text shadow-2xl">
@@ -518,13 +568,37 @@ function UnlockingDialog() {
           <Archive className="h-6 w-6" aria-hidden />
         </span>
         <h2 className="mt-5 text-xl font-semibold">서랍에서 기록을 꺼내고 있어요</h2>
-        <p className="mt-3 text-sm leading-6 text-archive-body">당신의 전생에 맞춰 이야기를 정리하고 있습니다. 잠시만 기다려주세요.</p>
+        <p className="mt-3 text-sm leading-6 text-archive-body">
+          {isWholeLife
+            ? "유년기부터 말년기까지 한 생애를 잇고 있습니다. 보통 1분 30초 안에 완성됩니다."
+            : "당신의 전생에 맞춰 이야기를 정리하고 있습니다. 보통 30초에서 1분 정도 걸립니다."}
+        </p>
         <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-archive-rose" aria-live="polite">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> 기록을 복원하는 중
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> {statusMessage || "기록을 복원하는 중"}
         </div>
       </section>
     </div>
   );
+}
+
+function UnlockErrorDialog({ message, onClose, onRetry }: { message: string; onClose: () => void; onRetry: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-archive-text/55 px-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="전생 기록 열기 오류">
+      <section className="w-full max-w-sm rounded-2xl border border-archive-card/30 bg-archive-card p-6 text-center text-archive-text shadow-2xl">
+        <h2 className="text-xl font-semibold">기록을 아직 열지 못했어요</h2>
+        <p className="mt-3 text-sm leading-6 text-archive-body">{message}</p>
+        <p className="mt-2 text-xs leading-5 text-archive-muted">완료되지 않은 요청에는 소울이 차감되지 않습니다.</p>
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button type="button" onClick={onClose} className="h-11 rounded-lg border border-archive-line bg-archive-panel text-sm font-semibold">닫기</button>
+          <button type="button" onClick={onRetry} className="h-11 rounded-lg bg-archive-text text-sm font-semibold text-archive-bg">다시 시도</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 function WholeLifeStory({ story }: { story: WholeLifeNarrative }) {

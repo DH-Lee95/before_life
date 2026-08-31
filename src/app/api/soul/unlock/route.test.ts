@@ -10,7 +10,6 @@ const unlockContent = vi.hoisted(() => vi.fn());
 const generateStoryWithOpenAI = vi.hoisted(() => vi.fn());
 const acquireContentGeneration = vi.hoisted(() => vi.fn());
 const releaseContentGeneration = vi.hoisted(() => vi.fn());
-const waitForGeneratedContent = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/serverClient", () => ({ getAuthenticatedUser }));
 vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ getBalance, getUnlockedContents, unlockContent }) }));
@@ -24,14 +23,13 @@ vi.mock("@/app/api/_lib/openAiStoryProvider", () => ({
 vi.mock("@/lib/content/contentGenerationLock", () => ({
   acquireContentGeneration,
   releaseContentGeneration,
-  waitForGeneratedContent,
 }));
 vi.mock("@/lib/content/createStoryGenerationPrompt", () => ({
   createStoryGenerationPrompt: () => ({ version: "v1" }),
   createWholeLifeGenerationPrompt: () => ({ version: "v1" }),
 }));
 
-import { POST } from "./route";
+import { maxDuration, POST } from "./route";
 
 const story = {
   title: "끝까지 남은 편지",
@@ -55,6 +53,10 @@ describe("POST /api/soul/unlock", () => {
     getUnlockedContents.mockResolvedValue([]);
     acquireContentGeneration.mockResolvedValue(true);
     releaseContentGeneration.mockResolvedValue(undefined);
+  });
+
+  it("allows enough execution time for the longest paid story", () => {
+    expect(maxDuration).toBe(180);
   });
 
   it("requires Kakao login before spending soul", async () => {
@@ -142,20 +144,36 @@ describe("POST /api/soul/unlock", () => {
     await expect(response.json()).resolves.toMatchObject({ code: "INSUFFICIENT_SOUL" });
   });
 
-  it("waits for an in-progress shared generation instead of calling OpenAI twice", async () => {
+  it("returns an accepted response immediately while another request generates the same content", async () => {
     getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
     getResult.mockResolvedValue({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} });
     getBalance.mockResolvedValue(3);
     getContent.mockResolvedValue(null);
     acquireContentGeneration.mockResolvedValue(false);
-    waitForGeneratedContent.mockResolvedValue({ content: story });
+
+    const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }));
+
+    expect(response.status).toBe(202);
+    expect(generateStoryWithOpenAI).not.toHaveBeenCalled();
+    expect(unlockContent).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({ code: "GENERATION_IN_PROGRESS" });
+  });
+
+  it("keeps a successful unlock successful when releasing the generation lock fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    getResult.mockResolvedValue({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} });
+    getBalance.mockResolvedValue(3);
+    getContent.mockResolvedValue(null);
+    generateStoryWithOpenAI.mockResolvedValue({ content: story });
+    upsertContent.mockResolvedValue({ content: story });
     unlockContent.mockResolvedValue({ balance: 2, charged: true });
+    releaseContentGeneration.mockRejectedValue(new Error("temporary release failure"));
 
     const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }));
 
     expect(response.status).toBe(200);
-    expect(waitForGeneratedContent).toHaveBeenCalled();
-    expect(generateStoryWithOpenAI).not.toHaveBeenCalled();
-    expect(unlockContent).toHaveBeenCalledWith("user-id", "sp_test", "last_day", "generation-key", 1);
+    expect(unlockContent).toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({ content: story, balance: 2, charged: true });
   });
 });

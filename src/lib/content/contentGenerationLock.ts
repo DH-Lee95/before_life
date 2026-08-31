@@ -1,5 +1,4 @@
-import type { SoulRepository } from "@/lib/repository/soulRepository";
-import type { SoulContent, SoulContentType } from "@/types/soul";
+import type { SoulContentType } from "@/types/soul";
 
 type ContentGenerationLockEnvironment = {
   SUPABASE_URL?: string;
@@ -45,22 +44,6 @@ export async function releaseContentGeneration(input: GenerationLockInput): Prom
   });
 }
 
-export async function waitForGeneratedContent({ repository, soulProfileId, contentType, generationKey, attempts = 20, delayMs = 1_000 }: {
-  repository: SoulRepository;
-  soulProfileId: string;
-  contentType: SoulContentType;
-  generationKey: string;
-  attempts?: number;
-  delayMs?: number;
-}): Promise<SoulContent | null> {
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    await delay(delayMs);
-    const content = await repository.getContent(soulProfileId, contentType, generationKey);
-    if (content) return content;
-  }
-  return null;
-}
-
 function readEnvironment(): { url: string; serviceRoleKey: string } | null {
   const environment: ContentGenerationLockEnvironment = {
     SUPABASE_URL: process.env.SUPABASE_URL,
@@ -79,6 +62,7 @@ async function callLockRpc<T>(environment: { url: string; serviceRoleKey: string
     headers: { apikey: environment.serviceRoleKey, Authorization: `Bearer ${environment.serviceRoleKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
     cache: "no-store",
+    signal: AbortSignal.timeout(8_000),
   });
   if (!response.ok) {
     const detail = (await response.text()).slice(0, 300);
@@ -89,8 +73,4 @@ async function callLockRpc<T>(environment: { url: string; serviceRoleKey: string
 
 function toClaimKey(input: GenerationLockInput) {
   return `${input.soulProfileId}:${input.contentType}:${input.generationKey}`;
-}
-
-function delay(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
