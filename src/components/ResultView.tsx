@@ -489,7 +489,12 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
           {lockedRecords.map((record) => {
             const opened = openedRecords[record.id];
             return opened
-              ? <UnlockedRecord key={record.id} record={{ ...opened, id: record.id, isUnlocked: true }} />
+              ? <UnlockedRecord key={record.id} record={{
+                ...opened,
+                id: record.id,
+                title: opened.title === record.title ? record.title : `${record.title} - ${opened.title}`,
+                isUnlocked: true,
+              }} />
               : <LockedRecord key={record.id} record={record} disabled={Boolean(unlockingContentType)} opening={unlockingContentType === record.id} onOpen={() => void unlockContent(record.id)} />;
           })}
         </div>

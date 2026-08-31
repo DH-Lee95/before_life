@@ -8,8 +8,7 @@ import { validateGeneratedStory } from "./validateGeneratedStory";
 
 describe("createFreeResult", () => {
   it("returns one full free record and five safe paid previews", () => {
-    const content = createFreeResult(
-      createSoulProfile({
+    const profile = createSoulProfile({
         nickname: "서연",
         birthDate: "1994-11-18",
         answers: {
@@ -21,8 +20,8 @@ describe("createFreeResult", () => {
           repeated_theme: "f",
           decisive_choice: "b",
         },
-      }),
-    );
+      });
+    const content = createFreeResult(profile);
 
     expect(content.sections.location).toBeTruthy();
     expect(content.sections.occupation).toBeTruthy();
@@ -54,7 +53,9 @@ describe("createFreeResult", () => {
     expect(locked.every((section) => "preview" in section && !("opening" in section))).toBe(true);
     expect(JSON.stringify(locked)).not.toContain("chapters");
     expect(content.sections.atmosphere).not.toContain("사람였습니다");
+    expect(content.summary).toContain(profile.mainPastLife.occupation);
     const renderedText = JSON.stringify(content);
+    expect(renderedText).not.toMatch(/감정의 결|관계의 온도|판을 읽고|자신만의 결/);
     expect(renderedText).not.toMatch(/기록원였던|재봉사이었던|생활으로|마음이라는 감정|약속이라는 감정|내 이름으로 선택|였던 살아가기|의 길로 들어선 계기/);
   });
 

@@ -7,10 +7,10 @@ type TraitSignal = {
 };
 
 const signalCatalog: TraitSignal[] = [
-  { key: "sensitivity", weight: 1, phrase: "작은 감정의 결도 오래 들여다보는 편" },
+  { key: "sensitivity", weight: 1, phrase: "작은 표정과 말투의 변화도 오래 기억하는 편" },
   { key: "independence", weight: 2, phrase: "쉽게 기대기보다 먼저 혼자 정리하는 편" },
   { key: "restraint", weight: 3, phrase: "중요한 마음일수록 서두르지 않고 간직하는 편" },
-  { key: "relation", weight: 4, phrase: "관계의 온도와 말하지 않은 마음을 중요하게 여기는 편" },
+  { key: "relation", weight: 4, phrase: "상대의 태도와 말하지 않은 마음을 중요하게 여기는 편" },
   { key: "ambition", weight: 5, phrase: "스스로 세운 기준을 끝까지 지키려는 편" },
   { key: "longing", weight: 6, phrase: "지나간 장면과 익숙한 감정을 쉽게 놓지 못하는 편" },
   { key: "vitality", weight: 7, phrase: "마음이 움직이면 조용히 행동으로 옮기는 편" },
@@ -57,7 +57,7 @@ function createDetail(primary: TraitSignal["key"], secondary: TraitSignal["key"]
 
 function createHiddenInstinct(traits: SoulProfile["traits"]): string {
   if (traits.independence >= traits.relation && traits.ambition >= 60) {
-    return "숨은 본능은 주도권입니다. 누군가의 답을 기다리기보다 판을 읽고 자신이 결정할 수 있는 자리를 원합니다.";
+    return "숨은 본능은 주도권입니다. 누군가의 답을 기다리기보다 상황을 직접 살피고 자신이 결정할 수 있는 자리를 원합니다.";
   }
   if (traits.relation >= 65) {
     return "숨은 본능은 선택받는 것이 아니라 서로의 편이 되는 것입니다. 관계의 이름보다 변하지 않는 태도에 더 크게 반응합니다.";
@@ -77,17 +77,17 @@ function createAttractionPattern(traits: SoulProfile["traits"]): string {
 
 function createTaste(traits: SoulProfile["traits"]): string {
   if (traits.longing >= 65) return "취향은 오래된 것에 새 의미를 더하는 쪽에 가깝습니다. 빈티지한 물건, 사연 있는 장소, 한 번 들으면 오래 남는 음악처럼 시간이 쌓인 것에 끌립니다.";
-  if (traits.sensitivity >= 65) return "취향은 소리와 빛, 말의 온도처럼 분위기를 만드는 요소에 민감합니다. 사람 많은 곳에서도 자신만의 결이 느껴지는 공간과 물건을 선호합니다.";
+  if (traits.sensitivity >= 65) return "취향은 소리와 빛, 말투처럼 분위기를 만드는 요소에 민감합니다. 사람 많은 곳에서도 자신이 편안함을 느끼는 공간과 물건을 선호합니다.";
   if (traits.vitality >= 65) return "취향은 정적인 완벽함보다 살아 있는 경험에 가깝습니다. 새 장소, 직접 해보는 일, 예상 밖의 대화에서 에너지를 얻습니다.";
   return "취향은 단정하지만 기능만 남은 것과는 다릅니다. 오래 써도 질리지 않는 물건, 이유가 분명한 디자인, 조용한 여운이 남는 경험을 좋아합니다.";
 }
 
 function createHeadline(key: TraitSignal["key"]): string {
   const headlines: Record<TraitSignal["key"], string> = {
-    sensitivity: "당신은 조용한 감정의 결에 깊은 사람입니다.",
+    sensitivity: "당신은 작은 감정 변화도 세심하게 알아보는 사람입니다.",
     independence: "당신은 쉽게 흔들리지 않는 자기 기준이 강한 사람입니다.",
     restraint: "당신은 중요한 마음을 오래 품는 사람입니다.",
-    relation: "당신은 관계의 온도에 섬세한 사람입니다.",
+    relation: "당신은 사람 사이의 태도 변화에 섬세한 사람입니다.",
     ambition: "당신은 마음속 기준을 현실까지 이어가는 사람입니다.",
     longing: "당신은 지나간 마음에서도 의미를 찾는 사람입니다.",
     vitality: "당신은 조용하지만 분명한 추진력이 있는 사람입니다.",

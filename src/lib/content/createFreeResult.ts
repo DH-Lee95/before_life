@@ -7,7 +7,7 @@ export function createFreeResult(profile: SoulProfile): FreeResultContent {
 
   return {
     title: `${profile.nickname || "당신"}님의 전생 서랍`,
-    summary: `${record.period}, ${record.region}. 당신에게 가장 선명하게 남아 있는 기록은 ${record.location}에서 시작됩니다.`,
+    summary: `당신의 대표 전생은 ${record.period} ${record.region}의 ${record.location}에서 ${asRole(record.occupation)} 살아간 사람의 기록입니다.`,
     natureSummary: profile.natureSummary,
     sections: {
       location: `${record.region}, ${record.location}`,
@@ -47,7 +47,7 @@ function createWholeLifePreview(profile: SoulProfile): FreeResultContent["sectio
   return {
     id: "whole_life",
     title: "한 사람의 생애로 읽는 전생",
-    description: `${record.period} ${record.region}에서 태어나 ${asRole(record.occupation)} 살아가기까지, 흩어진 장면을 시간순으로 이어 한 편의 생애로 복원합니다.`,
+    description: `${record.period} ${record.region}에서 태어나 ${asRole(record.occupation)} 일하며 살아온 과정을 유년기부터 말년기까지 시간순으로 보여줍니다.`,
     chapterPreviews: [
       { stage: "유년기", title: `${record.location}의 풍경을 처음 기억한 날` },
       { stage: "청년기", title: "처음 자신의 일을 선택하게 된 계기" },

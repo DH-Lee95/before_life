@@ -198,7 +198,7 @@ describe("ResultView", () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1_500); });
     vi.useRealTimers();
 
-    expect(await screen.findByText("끝까지 남은 편지")).toBeInTheDocument();
+    expect(await screen.findByText("전생의 마지막 날 - 끝까지 남은 편지")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "전생 기록을 여는 중" })).not.toBeInTheDocument();
     expect(unlockRequests).toBe(2);
   });
@@ -451,7 +451,7 @@ describe("ResultView", () => {
     expect(wholeLifeOffer.compareDocumentPosition(lockedRecord) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /이 기록 열기 · 1소울/ }));
-    expect(await screen.findByText("끝까지 남은 편지")).toBeInTheDocument();
+    expect(await screen.findByText("전생의 마지막 날 - 끝까지 남은 편지")).toBeInTheDocument();
     expect(screen.getAllByText("2소울 보유")).not.toHaveLength(0);
     expect(fetch).toHaveBeenCalledWith("/api/soul/unlock", expect.objectContaining({
       method: "POST",
