@@ -24,7 +24,7 @@ export function createSoulProfile(input: SoulInput): SoulProfile {
   const archetype = rankedArchetypes[0] as SoulArchetype;
   const random = createSeededRandom(readingHash);
 
-  const mainPastLife = createRecord(random, archetype);
+  const mainPastLife = createRecord(random, archetype, normalized.gender);
 
   return {
     inputVersion: INPUT_VERSION,
@@ -34,6 +34,7 @@ export function createSoulProfile(input: SoulInput): SoulProfile {
     nickname: normalized.nickname,
     birthDate: normalized.birthDate,
     birthTime: normalized.birthTime,
+    gender: normalized.gender,
     birthProfile,
     natureSummary,
     traits,
@@ -52,10 +53,12 @@ function rankArchetypes(traits: SoulTraits): SoulArchetype[] {
 function createRecord(
   random: ReturnType<typeof createSeededRandom>,
   archetype: SoulArchetype,
+  gender: NonNullable<SoulProfile["gender"]>,
 ): PastLifeRecord {
   const world = random.pick(pastLifeWorlds);
   const setting = historicalSettings[world.settingId];
   return {
+    gender,
     period: world.period,
     region: world.region,
     location: random.pick(setting.locations),

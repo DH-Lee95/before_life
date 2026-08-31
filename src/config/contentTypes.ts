@@ -51,4 +51,11 @@ export const lockedContentTypes: LockedContentConfig[] = [
     hint: "취향과 관계, 일하는 방식에 남은 오래된 습관",
     discoveryGain: 13,
   },
+  {
+    id: "family_bonds",
+    title: "전생의 가족은 지금 어떤 인연으로 남았을까",
+    shortTitle: "부모와 자식의 인연",
+    hint: "전생의 부모와 자식에게 남긴 감정, 현생 가족 관계에서 반복되는 방식",
+    discoveryGain: 10,
+  },
 ];

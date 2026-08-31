@@ -1,5 +1,5 @@
 import { questions } from "@/config/questions";
-import { questionIds, type AnswerId, type SoulInput } from "@/types/soul";
+import { questionIds, type AnswerId, type Gender, type SoulInput } from "@/types/soul";
 
 const answerIds = new Set<AnswerId>(["a", "b", "c", "d", "e", "f"]);
 
@@ -9,6 +9,7 @@ export function validateSoulInput(value: unknown): SoulInput {
   const nickname = value.nickname;
   const birthDate = value.birthDate;
   const birthTime = value.birthTime;
+  const gender = value.gender;
   const answers = value.answers;
 
   if (typeof nickname !== "string" || nickname.trim().length === 0 || nickname.trim().length > 30) {
@@ -19,6 +20,9 @@ export function validateSoulInput(value: unknown): SoulInput {
   }
   if (birthDate > new Date().toISOString().slice(0, 10)) {
     throw new Error("birthDate cannot be in the future");
+  }
+  if (gender !== "male" && gender !== "female") {
+    throw new Error("gender is invalid");
   }
   const normalizedBirthTime = birthTime === "" ? undefined : birthTime;
   if (normalizedBirthTime !== undefined && (typeof normalizedBirthTime !== "string" || !isValidTime(normalizedBirthTime))) {
@@ -48,6 +52,7 @@ export function validateSoulInput(value: unknown): SoulInput {
   return {
     nickname,
     birthDate,
+    gender: gender as Gender,
     birthTime: normalizedBirthTime,
     answers: validatedAnswers,
   };

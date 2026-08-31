@@ -137,7 +137,7 @@ describe("POST /api/soul/unlock", () => {
     });
   });
 
-  it("opens a selected record with the user's account balance", async () => {
+  it("opens the family-bonds record for one soul with the user's account balance", async () => {
     getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
     getResult.mockResolvedValue({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} });
     getBalance.mockResolvedValue(3);
@@ -146,11 +146,11 @@ describe("POST /api/soul/unlock", () => {
     upsertContent.mockResolvedValue({ content: story });
     unlockContent.mockResolvedValue({ balance: 2, charged: true });
 
-    const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }));
+    const response = await POST(request({ profileId: "sp_test", contentType: "family_bonds" }));
 
     expect(response.status).toBe(200);
-    expect(unlockContent).toHaveBeenCalledWith("user-id", "sp_test", "last_day", "generation-key", 1);
-    await expect(response.json()).resolves.toMatchObject({ contentType: "last_day", content: story, balance: 2 });
+    expect(unlockContent).toHaveBeenCalledWith("user-id", "sp_test", "family_bonds", "generation-key", 1);
+    await expect(response.json()).resolves.toMatchObject({ contentType: "family_bonds", content: story, balance: 2 });
   });
 
   it("asks for a charge before generating content when the balance is short", async () => {

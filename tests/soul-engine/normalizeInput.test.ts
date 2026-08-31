@@ -19,7 +19,7 @@ describe("normalizeSoulInput", () => {
           decisive_choice: "a",
         },
       }).normalizedKey,
-    ).toBe("donghyunlee|1995-03-04|unknown|a|b|c|a|d|b|a");
+    ).toBe("donghyunlee|1995-03-04|unknown|female|a|b|c|a|d|b|a");
   });
 
   it("uses unicode normalization for Korean nicknames", () => {

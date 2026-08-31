@@ -13,7 +13,7 @@ const DRAFT_KEY = "soul:test-draft";
 export function TestForm() {
   const router = useRouter();
   const [formState, dispatch] = useReducer(testFormReducer, initialTestFormState);
-  const { step, nickname, birthDate, birthTime, answers } = formState;
+  const { step, nickname, birthDate, birthTime, gender, answers } = formState;
   const [isRestored, setIsRestored] = useState(false);
   const [today, setToday] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,7 +43,7 @@ export function TestForm() {
 
   function canContinue(): boolean {
     if (step === 0) {
-      return nickname.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(birthDate);
+      return nickname.trim().length > 0 && /^\d{4}-\d{2}-\d{2}$/.test(birthDate) && Boolean(gender);
     }
 
     return currentQuestion ? Boolean(answers[currentQuestion.id]) : false;
@@ -64,6 +64,7 @@ export function TestForm() {
     const payload: SoulInput = {
       nickname,
       birthDate,
+      gender: gender || "female",
       ...(birthTime ? { birthTime } : {}),
       answers: answerMap,
     };
@@ -149,6 +150,31 @@ export function TestForm() {
               max={today || undefined}
             />
           </label>
+
+          <div>
+            <p className="mb-2 text-sm font-medium">성별</p>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label="성별 선택">
+              {([["male", "남성"], ["female", "여성"]] as const).map(([value, label]) => {
+                const selected = gender === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => dispatch({ type: "set_gender", gender: value })}
+                    className={`flex h-12 items-center justify-center gap-2 rounded-lg border text-sm transition ${
+                      selected
+                        ? "border-archive-rose bg-archive-card text-archive-text"
+                        : "border-archive-line bg-archive-panel text-archive-body"
+                    }`}
+                  >
+                    {selected ? <Check className="h-4 w-4 text-archive-rose" aria-hidden /> : null}
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div>
             <label htmlFor="birth-time" className="mb-2 block text-sm font-medium">출생시간 선택</label>

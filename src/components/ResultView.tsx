@@ -480,11 +480,11 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold text-archive-rose">원하는 장면부터 선택</p>
-            <h2 className="mt-1 text-xl font-semibold">아직 잠긴 깊은 기록 5개</h2>
+            <h2 className="mt-1 text-xl font-semibold">아직 잠긴 깊은 기록 {lockedRecords.length}개</h2>
           </div>
           <span className="rounded-full bg-archive-rose/10 px-3 py-1 text-xs font-semibold text-archive-rose">각 1소울</span>
         </div>
-        <p className="mt-3 text-sm leading-6 text-archive-body">전체 생애보다 궁금한 한 장면이 있다면 사랑, 재산, 마지막 날처럼 원하는 주제만 골라 열 수 있습니다.</p>
+        <p className="mt-3 text-sm leading-6 text-archive-body">전체 생애보다 궁금한 한 장면이 있다면 사랑, 가족, 재산, 마지막 날처럼 원하는 주제만 골라 열 수 있습니다.</p>
         <div className="mt-5 space-y-3">
           {lockedRecords.map((record) => {
             const opened = openedRecords[record.id];

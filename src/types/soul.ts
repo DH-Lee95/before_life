@@ -11,11 +11,13 @@ export const questionIds = [
 export type QuestionId = (typeof questionIds)[number];
 export type AnswerId = "a" | "b" | "c" | "d" | "e" | "f";
 export type AnswerMap = Record<QuestionId, AnswerId>;
+export type Gender = "male" | "female";
 
 export type SoulInput = {
   nickname: string;
   birthDate: string;
   birthTime?: string;
+  gender?: Gender;
   answers: AnswerMap;
 };
 
@@ -23,6 +25,7 @@ export type NormalizedSoulInput = {
   nickname: string;
   birthDate: string;
   birthTime: string;
+  gender: Gender;
   answers: AnswerMap;
   normalizedKey: string;
   readingKey: string;
@@ -56,6 +59,7 @@ export type NatureSummary = {
 };
 
 export type PastLifeRecord = {
+  gender: Gender;
   period: string;
   region: string;
   location: string;
@@ -85,6 +89,7 @@ export type SoulProfile = {
   nickname: string;
   birthDate: string;
   birthTime: string;
+  gender?: Gender;
   traits: SoulTraits;
   archetypeId: SoulArchetypeId;
   birthProfile: BirthProfile;
@@ -169,7 +174,8 @@ export type LockedContentType =
   | "wealth_status"
   | "karma_trace"
   | "present_influence"
-  | "decisive_choice";
+  | "decisive_choice"
+  | "family_bonds";
 
 export type SoulContentType = "free_summary" | "whole_life" | LockedContentType;
 

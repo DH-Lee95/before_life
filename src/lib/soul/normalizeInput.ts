@@ -1,6 +1,6 @@
 import { questionIds, type NormalizedSoulInput, type SoulInput } from "@/types/soul";
 
-export const INPUT_VERSION = "2026-08-27.v2";
+export const INPUT_VERSION = "2026-08-31.v3";
 
 function normalizeNickname(nickname: string): string {
   return nickname.normalize("NFC").trim().replace(/\s+/g, "").toLowerCase();
@@ -42,6 +42,7 @@ export function normalizeSoulInput(input: SoulInput): NormalizedSoulInput {
   const nickname = normalizeNickname(input.nickname);
   const birthDate = normalizeBirthDate(input.birthDate);
   const birthTime = normalizeBirthTime(input.birthTime);
+  const gender = input.gender ?? "female";
   const answers = input.answers;
 
   for (const questionId of questionIds) {
@@ -51,12 +52,13 @@ export function normalizeSoulInput(input: SoulInput): NormalizedSoulInput {
   }
 
   const answerKey = questionIds.map((questionId) => answers[questionId]).join("|");
-  const readingKey = `${birthDate}|${birthTime}|${answerKey}`;
+  const readingKey = `${birthDate}|${birthTime}|${gender}|${answerKey}`;
 
   return {
     nickname,
     birthDate,
     birthTime,
+    gender,
     answers,
     normalizedKey: `${nickname}|${readingKey}`,
     readingKey,

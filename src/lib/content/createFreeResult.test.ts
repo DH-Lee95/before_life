@@ -29,7 +29,7 @@ describe("createFreeResult", () => {
     expect(content.sections.success).toBeTruthy();
     expect(content.sections.compatibility).toBeTruthy();
     expect(content.sections.preference).toBeTruthy();
-    expect(content.sections.records).toHaveLength(6);
+    expect(content.sections.records).toHaveLength(7);
     expect(content.sections.wholeLife).toMatchObject({
       id: "whole_life",
       title: "한 사람의 생애로 읽는 전생",
@@ -47,7 +47,9 @@ describe("createFreeResult", () => {
     const unlocked = content.sections.records.filter((section) => section.isUnlocked);
     const locked = content.sections.records.filter((section) => !section.isUnlocked);
     expect(unlocked).toHaveLength(1);
-    expect(locked).toHaveLength(5);
+    expect(locked).toHaveLength(6);
+    expect(locked.map((record) => record.id)).toContain("family_bonds");
+    expect(content.summary).toContain("여성");
     expect(unlocked[0]).toMatchObject({ id: "present_influence", isUnlocked: true });
     expect(unlocked[0]).toHaveProperty("opening");
     expect(locked.every((section) => "preview" in section && !("opening" in section))).toBe(true);
@@ -75,6 +77,25 @@ describe("createFreeResult", () => {
     });
 
     expect(createFreeResult(profile).sections.records).toEqual(createFreeResult(profile).sections.records);
+  });
+
+  it("keeps love and last-day stories focused on character instead of repeating the occupation", () => {
+    for (const repeatedTheme of ["a", "e"] as const) {
+      const profile = createSoulProfile({
+        nickname: "서연",
+        birthDate: "1994-11-18",
+        answers: {
+          inner_response: "a", decision_pattern: "b", emotional_trace: "c", conflict_style: "d",
+          hidden_desire: "e", repeated_theme: repeatedTheme, decisive_choice: "b",
+        },
+      });
+      const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked);
+      const storyText = JSON.stringify(story);
+      const occupationMentions = storyText.split(profile.mainPastLife.occupation).length - 1;
+
+      expect(occupationMentions).toBeLessThanOrEqual(1);
+      expect(storyText).toMatch(/숨기|비밀|진실|선택|대가/);
+    }
   });
 
   it("keeps every recommended topic structurally complete", () => {
