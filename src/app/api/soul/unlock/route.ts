@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { createStoryCacheKey, generateStoryWithOpenAI } from "@/app/api/_lib/openAiStoryProvider";
@@ -6,6 +7,7 @@ import { contentCosts } from "@/config/pricing";
 import { getAccountRepository } from "@/lib/auth/accountRepository";
 import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { createStoryGenerationPrompt, createWholeLifeGenerationPrompt } from "@/lib/content/createStoryGenerationPrompt";
+import { acquireContentGeneration, releaseContentGeneration, waitForGeneratedContent } from "@/lib/content/contentGenerationLock";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
 import type { LockedContentType, SoulContentType } from "@/types/soul";
 
@@ -52,13 +54,28 @@ export async function POST(request: Request) {
     }
     let content = await repository.getContent(profileId, contentType, generationKey);
     if (!content) {
-      const generated = await generateStoryWithOpenAI({ prompt, promptCacheKey: generationKey });
-      content = await repository.upsertContent({
-        soulProfileId: profileId,
-        contentType,
-        content: generated.content,
-        generationKey,
-      });
+      const claim = { soulProfileId: profileId, contentType, generationKey, claimId: randomUUID() };
+      if (await acquireContentGeneration(claim)) {
+        try {
+          const generated = await generateStoryWithOpenAI({ prompt, promptCacheKey: generationKey });
+          content = await repository.upsertContent({
+            soulProfileId: profileId,
+            contentType,
+            content: generated.content,
+            generationKey,
+          });
+        } finally {
+          await releaseContentGeneration(claim);
+        }
+      } else {
+        content = await waitForGeneratedContent({ repository, soulProfileId: profileId, contentType, generationKey });
+        if (!content) {
+          return NextResponse.json({
+            message: "같은 기록을 다른 요청에서 준비하고 있습니다. 잠시 후 다시 열어주세요.",
+            code: "GENERATION_IN_PROGRESS",
+          }, { status: 409 });
+        }
+      }
     }
 
     const unlocked = await accountRepository.unlockContent(user.id, profileId, contentType, generationKey, cost);

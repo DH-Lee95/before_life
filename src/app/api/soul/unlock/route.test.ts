@@ -8,6 +8,9 @@ const getBalance = vi.hoisted(() => vi.fn());
 const getUnlockedContents = vi.hoisted(() => vi.fn());
 const unlockContent = vi.hoisted(() => vi.fn());
 const generateStoryWithOpenAI = vi.hoisted(() => vi.fn());
+const acquireContentGeneration = vi.hoisted(() => vi.fn());
+const releaseContentGeneration = vi.hoisted(() => vi.fn());
+const waitForGeneratedContent = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/serverClient", () => ({ getAuthenticatedUser }));
 vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ getBalance, getUnlockedContents, unlockContent }) }));
@@ -17,6 +20,11 @@ vi.mock("@/lib/repository/repositoryProvider", () => ({
 vi.mock("@/app/api/_lib/openAiStoryProvider", () => ({
   createStoryCacheKey: () => "generation-key",
   generateStoryWithOpenAI,
+}));
+vi.mock("@/lib/content/contentGenerationLock", () => ({
+  acquireContentGeneration,
+  releaseContentGeneration,
+  waitForGeneratedContent,
 }));
 vi.mock("@/lib/content/createStoryGenerationPrompt", () => ({
   createStoryGenerationPrompt: () => ({ version: "v1" }),
@@ -45,6 +53,8 @@ describe("POST /api/soul/unlock", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getUnlockedContents.mockResolvedValue([]);
+    acquireContentGeneration.mockResolvedValue(true);
+    releaseContentGeneration.mockResolvedValue(undefined);
   });
 
   it("requires Kakao login before spending soul", async () => {
@@ -130,5 +140,22 @@ describe("POST /api/soul/unlock", () => {
 
     expect(response.status).toBe(402);
     await expect(response.json()).resolves.toMatchObject({ code: "INSUFFICIENT_SOUL" });
+  });
+
+  it("waits for an in-progress shared generation instead of calling OpenAI twice", async () => {
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    getResult.mockResolvedValue({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} });
+    getBalance.mockResolvedValue(3);
+    getContent.mockResolvedValue(null);
+    acquireContentGeneration.mockResolvedValue(false);
+    waitForGeneratedContent.mockResolvedValue({ content: story });
+    unlockContent.mockResolvedValue({ balance: 2, charged: true });
+
+    const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }));
+
+    expect(response.status).toBe(200);
+    expect(waitForGeneratedContent).toHaveBeenCalled();
+    expect(generateStoryWithOpenAI).not.toHaveBeenCalled();
+    expect(unlockContent).toHaveBeenCalledWith("user-id", "sp_test", "last_day", "generation-key", 1);
   });
 });
