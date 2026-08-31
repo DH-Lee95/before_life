@@ -1,6 +1,6 @@
 import {
+  historicalSettings,
   pastLifeWorlds,
-  socialClasses,
 } from "@/config/soulEnginePools";
 import { soulArchetypes, type SoulArchetype } from "@/config/soulArchetypes";
 import type { AnswerId, LockedContentType, PastLifeRecord, SoulInput, SoulProfile, SoulTraits } from "@/types/soul";
@@ -11,7 +11,7 @@ import { createSeededRandom } from "./seededRandom";
 import { createSoulId } from "./createSoulId";
 import { INPUT_VERSION, normalizeSoulInput } from "./normalizeInput";
 
-export const ENGINE_VERSION = "soul-engine.2026-08-27.v4";
+export const ENGINE_VERSION = "soul-engine.2026-08-31.v5";
 
 export function createSoulProfile(input: SoulInput): SoulProfile {
   const normalized = normalizeSoulInput(input);
@@ -54,12 +54,13 @@ function createRecord(
   archetype: SoulArchetype,
 ): PastLifeRecord {
   const world = random.pick(pastLifeWorlds);
+  const setting = historicalSettings[world.settingId];
   return {
     period: world.period,
     region: world.region,
-    location: random.pick(archetype.locations),
-    occupation: random.pick(archetype.occupations),
-    socialClass: random.pick(socialClasses),
+    location: random.pick(setting.locations),
+    occupation: random.pick(setting.occupations),
+    socialClass: random.pick(setting.socialClasses),
     hiddenNature: random.pick(archetype.hiddenNatures),
     coreTheme: random.pick(archetype.coreThemes),
   };

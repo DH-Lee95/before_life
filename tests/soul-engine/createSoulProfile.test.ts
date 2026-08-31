@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoulProfile } from "@/lib/soul/createSoulProfile";
+import { historicalSettings, pastLifeWorlds } from "@/config/soulEnginePools";
 import type { SoulInput } from "@/types/soul";
 
 const baseInput: SoulInput = {
@@ -63,5 +64,18 @@ describe("createSoulProfile", () => {
       "15세기 후반",
       "조선 후기 한양 외곽",
     ]);
+  });
+
+  it("selects the role, location, and social position from the chosen world's compatible pool", () => {
+    const profile = createSoulProfile(baseInput);
+    const world = pastLifeWorlds.find((candidate) => (
+      candidate.period === profile.mainPastLife.period && candidate.region === profile.mainPastLife.region
+    ));
+
+    expect(world).toBeDefined();
+    const setting = historicalSettings[world!.settingId];
+    expect(setting.occupations).toContain(profile.mainPastLife.occupation);
+    expect(setting.locations).toContain(profile.mainPastLife.location);
+    expect(setting.socialClasses).toContain(profile.mainPastLife.socialClass);
   });
 });
