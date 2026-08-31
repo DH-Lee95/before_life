@@ -17,11 +17,12 @@ Analytics API는 Supabase가 설정된 환경에서 `analytics_events`에 영속
 
 1. Supabase 프로젝트를 준비한다.
 2. `supabase/migrations/`의 migration을 파일명 순서대로 Supabase CLI 또는 프로젝트의 migration 배포 절차로 적용한다.
-3. `.env.example`을 참고해 로컬의 `.env.local`과 배포 환경에 아래 두 서버 변수를 함께 설정한다.
+3. `.env.example`을 참고해 로컬의 `.env.local`과 배포 환경에 아래 서버 변수를 함께 설정한다. `SUPABASE_ANON_KEY`는 카카오 OAuth 시작·콜백에 사용되며, service role key는 서버 저장소에만 사용한다.
 
 ```bash
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-or-publishable-key
 ```
 
 4. 개발 서버 또는 배포를 다시 시작한다.
