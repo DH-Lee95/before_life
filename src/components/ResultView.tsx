@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
+import { Archive, BookOpen, Brain, Check, Coins, Gift, Heart, Loader2, LockKeyhole, RefreshCw, RotateCcw, Share2, TrendingUp } from "lucide-react";
 
 import { contentCosts, referralReward, soulPacks, type SoulPack } from "@/config/pricing";
 import { asIdentity } from "@/lib/content/koreanGrammar";
@@ -56,7 +56,6 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   const [unlockingContentType, setUnlockingContentType] = useState("");
   const [previewStatus, setPreviewStatus] = useState<"idle" | "loading" | "error">("idle");
   const [previewMessage, setPreviewMessage] = useState("");
-  const resumedAction = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -114,15 +113,15 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
   );
 
   useEffect(() => {
-    if (!payload?.account.authenticated || resumedAction.current) return;
+    if (!payload?.account.authenticated) return;
     const pending = readPendingResultAction(profileId);
     if (!pending) return;
-    resumedAction.current = true;
-    if (pending.kind === "unlock") void unlockContent(pending.contentType);
-    else {
+    if (pending.kind === "purchase") {
       const pack = soulPacks.find((candidate) => candidate.id === pending.packId);
       if (pack) requestPurchase(pack);
       else clearPendingResultAction(profileId);
+    } else {
+      clearPendingResultAction(profileId);
     }
     // The action functions intentionally use the latest loaded result state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,7 +217,7 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
         return;
       }
       if (response.status === 402 && data.code === "INSUFFICIENT_SOUL") {
-        savePendingResultAction(profileId, { kind: "unlock", contentType });
+        clearPendingResultAction(profileId);
         setPurchaseMessage(data.message ?? "소울이 부족합니다. 아래에서 필요한 만큼 충전해주세요.");
         showPurchase(contentType);
         return;
@@ -497,7 +496,25 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
       </section>
 
       <p className="text-center text-[11px] leading-5 text-archive-muted">전생 서랍은 AI 기반 엔터테인먼트 스토리텔링 서비스입니다.</p>
+      {unlockingContentType ? <UnlockingDialog /> : null}
     </section>
+  );
+}
+
+function UnlockingDialog() {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-archive-text/55 px-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="전생 기록을 여는 중">
+      <section className="w-full max-w-sm rounded-2xl border border-archive-card/30 bg-archive-card p-6 text-center text-archive-text shadow-2xl">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-archive-rose/10 text-archive-rose">
+          <Archive className="h-6 w-6" aria-hidden />
+        </span>
+        <h2 className="mt-5 text-xl font-semibold">서랍에서 기록을 꺼내고 있어요</h2>
+        <p className="mt-3 text-sm leading-6 text-archive-body">당신의 전생에 맞춰 이야기를 정리하고 있습니다. 잠시만 기다려주세요.</p>
+        <div className="mt-5 flex items-center justify-center gap-2 text-xs font-semibold text-archive-rose" aria-live="polite">
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> 기록을 복원하는 중
+        </div>
+      </section>
+    </div>
   );
 }
 

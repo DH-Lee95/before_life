@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ResultView } from "./ResultView";
@@ -102,6 +102,57 @@ describe("ResultView", () => {
     expect(window.confirm).toHaveBeenLastCalledWith("소울을 충전하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?");
     expect(window.confirm).not.toHaveBeenCalledWith("3소울을 2,490원에 충전하시겠습니까?");
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/payment/intents"))).toBe(false);
+  });
+
+  it("does not resume a saved content unlock after returning to the result", async () => {
+    sessionStorage.setItem("soul:pending-action:sp_test", JSON.stringify({ kind: "unlock", contentType: "whole_life" }));
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify(resultPayload({ balance: 3 })), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<ResultView profileId="sp_test" />);
+
+    await screen.findByText("한 사람의 생애로 읽는 전생");
+    await waitFor(() => expect(sessionStorage.getItem("soul:pending-action:sp_test")).toBeNull());
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/soul/unlock"))).toBe(false);
+  });
+
+  it("shows a drawer-opening dialog while a locked record is being generated", async () => {
+    let resolveUnlock: ((response: Response) => void) | undefined;
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      if (String(input).includes("/api/soul/result/")) {
+        return Promise.resolve(new Response(JSON.stringify(resultPayload({ balance: 3 })), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        }));
+      }
+      if (String(input).includes("/api/soul/unlock")) {
+        return new Promise<Response>((resolve) => { resolveUnlock = resolve; });
+      }
+      return Promise.resolve(new Response(JSON.stringify({ message: "unexpected request" }), {
+        status: 500, headers: { "Content-Type": "application/json" },
+      }));
+    }));
+
+    render(<ResultView profileId="sp_test" />);
+    fireEvent.click(await screen.findByRole("button", { name: /이 기록 열기 · 1소울/ }));
+
+    expect(await screen.findByRole("dialog", { name: "전생 기록을 여는 중" })).toHaveTextContent("서랍에서 기록을 꺼내고 있어요");
+
+    resolveUnlock?.(new Response(JSON.stringify({
+      contentType: "last_day",
+      balance: 2,
+      content: { title: "끝까지 남은 편지", opening: "마지막 아침", chapters: [], presentMeaning: "의미", readingTimeMinutes: 4 },
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "전생 기록을 여는 중" })).not.toBeInTheDocument());
   });
 
   it("reveals the representative life before traits and shows one free record", async () => {
@@ -291,3 +342,28 @@ describe("ResultView", () => {
     expect(screen.getByText("유년기의 기록")).toBeInTheDocument();
   });
 });
+
+function resultPayload({ balance }: { balance: number }) {
+  return {
+    profile: {
+      displaySoulId: "S-TEST",
+      discoveryPercent: 17,
+      natureSummary: { headline: "당신은 중요한 마음을 오래 품는 사람입니다.", signals: ["중요한 마음을 간직하는 편"], pastLifeBridge: "첫 번째 서랍에 남아 있습니다." },
+    },
+    account: { authenticated: true, balance },
+    freeContent: {
+      content: {
+        title: "전생 서랍",
+        summary: "첫 번째 기록",
+        natureSummary: {
+          headline: "당신은 중요한 마음을 오래 품는 사람입니다.", signals: ["중요한 마음을 간직하는 편"], detail: "기록", hiddenInstinct: "의미", attractionPattern: "신뢰", taste: "기록", pastLifeBridge: "첫 번째 서랍에 남아 있습니다.",
+        },
+        sections: {
+          location: "오래된 서재", occupation: "편지 대필가", atmosphere: "조용한 기록", love: "신뢰", success: "꾸준함", compatibility: "편안함", preference: "기록",
+          wholeLife: { id: "whole_life", title: "한 사람의 생애로 읽는 전생", description: "한 생애", chapterPreviews: [], readingTimeMinutes: 10, soulCost: 2, isUnlocked: false },
+          records: [{ id: "last_day", title: "전생의 마지막 날", hint: "마지막", preview: "편지", readingTimeMinutes: 4, isUnlocked: false }],
+        },
+      },
+    },
+  };
+}
