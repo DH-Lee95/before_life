@@ -70,7 +70,10 @@ export type NarrativeTheme = {
   description: string;
 };
 
-export const soulArchetypeIds = ["pioneer", "chronicler", "caretaker", "artisan", "merchant"] as const;
+export const soulArchetypeIds = [
+  "pioneer", "chronicler", "caretaker", "artisan", "merchant",
+  "wayfinder", "scholar", "steward", "performer", "visionary",
+] as const;
 export type SoulArchetypeId = (typeof soulArchetypeIds)[number];
 
 export type SoulProfile = {

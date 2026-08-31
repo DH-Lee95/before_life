@@ -4,10 +4,11 @@ import { soulArchetypes } from "./soulArchetypes";
 
 describe("soulArchetypes", () => {
   it("provides content pools for every archetype", () => {
-    expect(soulArchetypes).toHaveLength(5);
-    expect(soulArchetypes.every((item) => item.occupations.length > 1)).toBe(true);
-    expect(soulArchetypes.every((item) => item.locations.length > 1)).toBe(true);
-    expect(soulArchetypes.every((item) => item.coreThemes.length > 1)).toBe(true);
+    expect(soulArchetypes).toHaveLength(10);
+    expect(soulArchetypes.every((item) => item.occupations.length >= 8)).toBe(true);
+    expect(soulArchetypes.every((item) => item.locations.length >= 8)).toBe(true);
+    expect(soulArchetypes.every((item) => item.hiddenNatures.length >= 8)).toBe(true);
+    expect(soulArchetypes.every((item) => item.coreThemes.length >= 8)).toBe(true);
     expect(
       soulArchetypes.flatMap((item) => item.coreThemes).every(
         (theme) =>
