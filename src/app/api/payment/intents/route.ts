@@ -2,10 +2,11 @@ import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { assertLiveCommerceReady } from "@/config/business";
 import { getAccountRepository } from "@/lib/auth/accountRepository";
 import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { createPaymentIntent } from "@/lib/payment/createPaymentIntent";
-import { readTestPaymentEnvironment } from "@/lib/payment/paymentEnvironment";
+import { readPaymentEnvironment } from "@/lib/payment/paymentEnvironment";
 import { getPaymentRepository } from "@/lib/payment/paymentProvider";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
 import { ANONYMOUS_SESSION_COOKIE } from "@/lib/session/anonymousSession";
@@ -13,10 +14,11 @@ import { hashResultToken } from "@/lib/session/resultToken";
 
 export async function POST(request: Request) {
   try {
-    readTestPaymentEnvironment({
+    const paymentEnvironment = readPaymentEnvironment({
       NEXT_PUBLIC_TOSS_CLIENT_KEY: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
       TOSS_SECRET_KEY: process.env.TOSS_SECRET_KEY,
     });
+    assertLiveCommerceReady(paymentEnvironment.mode);
     const anonymousSessionId = await getAnonymousSessionId();
     if (!anonymousSessionId) return NextResponse.json({ message: "session required" }, { status: 401 });
     const user = await getAuthenticatedUser();

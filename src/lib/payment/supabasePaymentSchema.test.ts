@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 describe("payment persistence migration", () => {
   const sql = readFileSync("supabase/migrations/20260828000200_payment_persistence.sql", "utf8");
+  const refundSql = readFileSync("supabase/migrations/20260831000300_payment_refund_reconciliation.sql", "utf8");
 
   it("stores intents, transactions, and an immutable soul ledger", () => {
     expect(sql).toContain("create table if not exists public.payment_intents");
@@ -19,5 +20,13 @@ describe("payment persistence migration", () => {
     expect(sql).toContain("on conflict (payment_intent_id) do nothing");
     expect(sql).toContain("on conflict (anonymous_session_id, reason, reference_id) do nothing");
     expect(sql).toContain("grant execute on function public.approve_soul_purchase");
+  });
+
+  it("reverses a fully canceled purchase through an idempotent ledger entry", () => {
+    expect(refundSql).toContain("create or replace function public.cancel_soul_purchase");
+    expect(refundSql).toContain("set status = 'canceled'");
+    expect(refundSql).toContain("-v_intent.souls, 'refund'");
+    expect(refundSql).toContain("on conflict (anonymous_session_id, reason, reference_id) do nothing");
+    expect(refundSql).toContain("grant execute on function public.cancel_soul_purchase");
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { confirmTossPayment } from "./tossPaymentProvider";
+import { confirmTossPayment, getTossPaymentByOrderId } from "./tossPaymentProvider";
 
 describe("confirmTossPayment", () => {
   it("confirms with server credentials and a stable idempotency key", async () => {
@@ -48,5 +48,30 @@ describe("confirmTossPayment", () => {
       amountKrw: 3990,
       fetchImpl,
     })).rejects.toThrow("payment verification failed");
+  });
+
+  it("retrieves a payment by order id with server credentials", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      paymentKey: "payment-key",
+      orderId: "soul_order-id",
+      totalAmount: 3990,
+      status: "DONE",
+    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+
+    const payment = await getTossPaymentByOrderId({
+      secretKey: "live_secret",
+      orderId: "soul_order-id",
+      fetchImpl,
+    });
+
+    expect(payment.status).toBe("DONE");
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://api.tosspayments.com/v1/payments/orders/soul_order-id",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: `Basic ${Buffer.from("live_secret:").toString("base64")}`,
+        }),
+      }),
+    );
   });
 });

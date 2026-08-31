@@ -4,6 +4,7 @@ const getAuthenticatedUser = vi.hoisted(() => vi.fn());
 const claimSession = vi.hoisted(() => vi.fn());
 const upsertProfile = vi.hoisted(() => vi.fn());
 const upsertContent = vi.hoisted(() => vi.fn());
+const consumeApiRateLimit = vi.hoisted(() => vi.fn());
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({
@@ -23,6 +24,7 @@ vi.mock("@/lib/soul/createSoulProfile", () => ({
   createSoulProfile: () => ({ soulHash: "hash", displaySoulId: "SOUL-TEST", discoveryPercent: 17 }),
 }));
 vi.mock("@/lib/content/createFreeResult", () => ({ createFreeResult: () => ({ summary: "free" }) }));
+vi.mock("@/lib/security/apiRateLimit", () => ({ consumeApiRateLimit }));
 vi.mock("@/lib/session/resultToken", () => ({
   createResultToken: () => "result-token",
   hashResultToken: () => "token-hash",
@@ -42,6 +44,20 @@ describe("POST /api/soul/create", () => {
     });
     upsertContent.mockResolvedValue({ content: { summary: "free" } });
     claimSession.mockResolvedValue({ claimed: true });
+    consumeApiRateLimit.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
+  });
+
+  it("rejects excessive free result creation before writing data", async () => {
+    consumeApiRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 120 });
+
+    const response = await POST(new Request("http://localhost/api/soul/create", {
+      method: "POST", headers: { "Content-Type": "application/json", "x-forwarded-for": "203.0.113.7" },
+      body: JSON.stringify({ answers: [] }),
+    }));
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("120");
+    expect(upsertProfile).not.toHaveBeenCalled();
   });
 
   it("links a newly created result to an already authenticated account", async () => {

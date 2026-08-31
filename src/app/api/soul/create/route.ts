@@ -5,12 +5,27 @@ import { getAccountRepository } from "@/lib/auth/accountRepository";
 import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { createFreeResult } from "@/lib/content/createFreeResult";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
+import { consumeApiRateLimit } from "@/lib/security/apiRateLimit";
 import { ANONYMOUS_SESSION_COOKIE, anonymousSessionCookieOptions, createAnonymousSessionId } from "@/lib/session/anonymousSession";
 import { createResultToken, hashResultToken } from "@/lib/session/resultToken";
 import { createSoulProfile } from "@/lib/soul/createSoulProfile";
 import { validateSoulInput } from "@/lib/soul/validateSoulInput";
 
 export async function POST(request: Request) {
+  try {
+    const rateLimit = await consumeApiRateLimit({
+      request, scope: "soul-create", limit: 20, windowSeconds: 60 * 60,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { message: "잠시 후 다시 시도해주세요." },
+        { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } },
+      );
+    }
+  } catch (error) {
+    console.error("Soul creation rate limiter failed", error);
+  }
+
   let body;
   try {
     body = validateSoulInput(await request.json());

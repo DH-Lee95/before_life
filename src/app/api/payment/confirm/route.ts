@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { getAccountRepository } from "@/lib/auth/accountRepository";
 import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { getPaymentRepository } from "@/lib/payment/paymentProvider";
-import { readTestPaymentEnvironment } from "@/lib/payment/paymentEnvironment";
+import { readPaymentEnvironment } from "@/lib/payment/paymentEnvironment";
 import { confirmTossPayment } from "@/lib/payment/tossPaymentProvider";
 import { ANONYMOUS_SESSION_COOKIE } from "@/lib/session/anonymousSession";
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     let providerPayload: unknown = { status: "DONE", repeated: true };
     if (intent.status === "pending") {
-      const { secretKey } = readTestPaymentEnvironment({
+      const { secretKey } = readPaymentEnvironment({
         NEXT_PUBLIC_TOSS_CLIENT_KEY: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
         TOSS_SECRET_KEY: process.env.TOSS_SECRET_KEY,
       });

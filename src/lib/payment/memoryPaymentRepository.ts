@@ -15,6 +15,9 @@ export function createMemoryPaymentRepository(): PaymentRepository {
       const intent = intents.get(orderId);
       return intent?.anonymousSessionId === anonymousSessionId ? intent : null;
     },
+    async getIntentByOrderId(orderId) {
+      return intents.get(orderId) ?? null;
+    },
     async approveIntent({ intentId, providerPaymentKey }) {
       const intent = [...intents.values()].find((candidate) => candidate.id === intentId);
       if (!intent) throw new Error("payment intent not found");
@@ -34,6 +37,21 @@ export function createMemoryPaymentRepository(): PaymentRepository {
       const balance = (balances.get(intent.anonymousSessionId) ?? 0) + intent.souls;
       balances.set(intent.anonymousSessionId, balance);
       return { intent: approved, balance } satisfies ApprovedPurchase;
+    },
+    async cancelIntent({ intentId, providerPaymentKey }) {
+      const intent = [...intents.values()].find((candidate) => candidate.id === intentId);
+      if (!intent) throw new Error("payment intent not found");
+      if (intent.providerPaymentKey !== providerPaymentKey) throw new Error("payment key mismatch");
+      if (intent.status === "canceled") {
+        return { intent, balance: balances.get(intent.anonymousSessionId) ?? 0 };
+      }
+      if (intent.status !== "approved") throw new Error("payment intent is not approved");
+
+      const canceled: PaymentIntent = { ...intent, status: "canceled" };
+      intents.set(intent.orderId, canceled);
+      const balance = (balances.get(intent.anonymousSessionId) ?? 0) - intent.souls;
+      balances.set(intent.anonymousSessionId, balance);
+      return { intent: canceled, balance } satisfies ApprovedPurchase;
     },
   };
 }

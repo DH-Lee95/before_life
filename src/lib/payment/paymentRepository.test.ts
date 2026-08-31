@@ -7,9 +7,12 @@ describe("PaymentRepository", () => {
     const contract = {
       createIntent: async (intent) => intent,
       getIntent: async () => null,
+      getIntentByOrderId: async () => null,
       approveIntent: async () => { throw new Error("not implemented"); },
+      cancelIntent: async () => { throw new Error("not implemented"); },
     } satisfies PaymentRepository;
 
     expect(contract).toHaveProperty("approveIntent");
+    expect(contract).toHaveProperty("cancelIntent");
   });
 });

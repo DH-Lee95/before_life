@@ -53,6 +53,18 @@ describe("/api/payment/intents", () => {
     expect(paymentRepository.createIntent).toHaveBeenCalledWith(expect.objectContaining({ amountKrw: 2490 }));
   });
 
+  it("does not open live payments before business disclosures are configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_TOSS_CLIENT_KEY", "live_gck_client");
+    vi.stubEnv("TOSS_SECRET_KEY", "live_gsk_secret");
+
+    const response = await POST(new Request("http://localhost/api/payment/intents", {
+      method: "POST", body: JSON.stringify({ profileId: "sp_test", packId: "soul_1" }),
+    }));
+
+    expect(response.status).toBe(503);
+    expect(paymentRepository.createIntent).not.toHaveBeenCalled();
+  });
+
   it("does not create an intent for a result the session cannot access", async () => {
     getResult.mockResolvedValue(null);
     const response = await POST(new Request("http://localhost/api/payment/intents", {

@@ -1,6 +1,7 @@
 import { Archive, CheckCircle2, Sparkles } from "lucide-react";
 
 import { LandingActions } from "@/components/LandingActions";
+import { SiteFooter } from "@/components/SiteFooter";
 import { AccountStatus } from "@/components/auth/AccountStatus";
 
 export default function HomePage() {
@@ -58,6 +59,7 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+      <SiteFooter />
     </main>
   );
 }

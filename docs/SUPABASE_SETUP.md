@@ -42,7 +42,9 @@ SUPABASE_ANON_KEY=your-anon-or-publishable-key
 - 모든 영속 테이블은 RLS를 활성화하고 `anon`, `authenticated` 직접 권한을 제거한다. 현재 접근은 서버 API route의 service role 요청으로만 수행한다.
 - `soul_contents`는 계정 간 재사용하는 생성 캐시일 뿐이다. 유료 열람 권한은 `soul_content_unlocks`의 `(user_id, soul_profile_id, content_type)` 행으로만 판정한다.
 - 잠금 해제 RPC는 사용자 단위 transaction advisory lock으로 동시 요청을 직렬화해 중복 차감과 음수 잔액을 방지한다.
+- 전액 환불 웹훅은 `cancel_soul_purchase` RPC로 결제 상태 변경과 구매 소울 회수를 한 transaction에서 멱등 처리한다.
 - Analytics는 API route의 service role repository로만 저장하며, 클라이언트 payload의 `anonymousSessionId`는 무시하고 서버 cookie를 사용한다.
+- 무료 결과 생성과 analytics API 요청 제한은 `api_rate_limits`와 `consume_api_rate_limit` RPC를 사용한다. IP 원문은 저장하지 않고 서버 HMAC 해시만 저장한다.
 
 ## 수동 연결 검증
 
@@ -56,3 +58,4 @@ SUPABASE_ANON_KEY=your-anon-or-publishable-key
 6. 계정 A에서 유료 기록을 연 뒤 새로고침해 본문과 잔액이 복원되는지 확인한다.
 7. 동일 입력으로 같은 profile을 조회하는 계정 B와 공유 토큰 방문자에게 계정 A의 유료 본문이 노출되지 않는지 확인한다.
 8. 계정 A에서 같은 기록 열기 요청을 동시에 두 번 보내도 소울이 한 번만 차감되는지 확인한다.
+9. 같은 IP에서 무료 결과 생성을 한 시간에 20회 넘게 요청했을 때 API가 `429`와 `Retry-After`를 반환하는지 확인한다.

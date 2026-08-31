@@ -1,9 +1,16 @@
-type TossPayment = {
+export type TossPayment = {
   paymentKey: string;
   orderId: string;
   totalAmount: number;
+  balanceAmount?: number;
   status: string;
   [key: string]: unknown;
+};
+
+type GetTossPaymentInput = {
+  secretKey: string;
+  orderId: string;
+  fetchImpl?: typeof fetch;
 };
 
 type ConfirmTossPaymentInput = {
@@ -40,5 +47,23 @@ export async function confirmTossPayment({
   ) {
     throw new Error("payment verification failed");
   }
+  return payload;
+}
+
+export async function getTossPaymentByOrderId({
+  secretKey,
+  orderId,
+  fetchImpl = fetch,
+}: GetTossPaymentInput): Promise<TossPayment> {
+  const response = await fetchImpl(`https://api.tosspayments.com/v1/payments/orders/${encodeURIComponent(orderId)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`,
+      "Content-Type": "application/json",
+    },
+    cache: "no-store",
+  });
+  const payload = await response.json() as TossPayment & { message?: string };
+  if (!response.ok) throw new Error(payload.message ?? "payment lookup failed");
   return payload;
 }

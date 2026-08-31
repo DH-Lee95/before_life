@@ -46,5 +46,27 @@ describe("memory payment repository", () => {
 
     expect(await repository.getIntent(intent.orderId, "anon_owner")).toEqual(intent);
     expect(await repository.getIntent(intent.orderId, "anon_other")).toBeNull();
+    expect(await repository.getIntentByOrderId(intent.orderId)).toEqual(intent);
+  });
+
+  it("reverses an approved purchase idempotently after a full refund", async () => {
+    const repository = createMemoryPaymentRepository();
+    const intent = createPaymentIntent({
+      anonymousSessionId: "anon_owner", soulProfileId: "sp_test", packId: "soul_3",
+      id: "intent-id", randomId: "random-id", now: new Date(),
+    });
+    await repository.createIntent(intent);
+    await repository.approveIntent({ intentId: intent.id, providerPaymentKey: "payment-key", rawPayload: {} });
+
+    const first = await repository.cancelIntent({
+      intentId: intent.id, providerPaymentKey: "payment-key", rawPayload: { status: "CANCELED" },
+    });
+    const repeated = await repository.cancelIntent({
+      intentId: intent.id, providerPaymentKey: "payment-key", rawPayload: { status: "CANCELED" },
+    });
+
+    expect(first.intent.status).toBe("canceled");
+    expect(first.balance).toBe(0);
+    expect(repeated.balance).toBe(0);
   });
 });

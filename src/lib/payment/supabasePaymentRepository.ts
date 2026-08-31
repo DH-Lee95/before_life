@@ -89,6 +89,13 @@ export function createSupabasePaymentRepository({
       const row = (await request<PaymentIntentRow[]>(`payment_intents?${params}`))[0];
       return row ? toIntent(row, anonymousSessionId) : null;
     },
+    async getIntentByOrderId(orderId) {
+      const params = new URLSearchParams({ order_id: `eq.${orderId}`, limit: "1" });
+      const row = (await request<PaymentIntentRow[]>(`payment_intents?${params}`))[0];
+      if (!row) return null;
+      const anonymousSessionId = await getSessionIdByRowId(row.anonymous_session_id);
+      return toIntent(row, anonymousSessionId);
+    },
     async approveIntent({ intentId, providerPaymentKey, rawPayload }) {
       const result = await request<{ balance: number }>("rpc/approve_soul_purchase", {
         method: "POST",
@@ -100,6 +107,20 @@ export function createSupabasePaymentRepository({
       });
       const row = await getIntentRowById(intentId);
       if (!row) throw new Error("approved payment intent not found");
+      const anonymousSessionId = await getSessionIdByRowId(row.anonymous_session_id);
+      return { intent: toIntent(row, anonymousSessionId), balance: result.balance } satisfies ApprovedPurchase;
+    },
+    async cancelIntent({ intentId, providerPaymentKey, rawPayload }) {
+      const result = await request<{ balance: number }>("rpc/cancel_soul_purchase", {
+        method: "POST",
+        body: JSON.stringify({
+          p_payment_intent_id: intentId,
+          p_provider_payment_key: providerPaymentKey,
+          p_raw_payload: rawPayload,
+        }),
+      });
+      const row = await getIntentRowById(intentId);
+      if (!row) throw new Error("canceled payment intent not found");
       const anonymousSessionId = await getSessionIdByRowId(row.anonymous_session_id);
       return { intent: toIntent(row, anonymousSessionId), balance: result.balance } satisfies ApprovedPurchase;
     },

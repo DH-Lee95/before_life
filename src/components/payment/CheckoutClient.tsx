@@ -88,7 +88,12 @@ export function CheckoutClient() {
         {!intent ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
         {intent ? `${intent.amountKrw.toLocaleString("ko-KR")}원 결제하기` : "준비 중"}
       </button>
-      <p className="mt-3 text-center text-[11px] leading-5 text-archive-muted">테스트 키를 사용하면 실제 금액은 차감되지 않습니다.</p>
+      <p className="mt-3 text-center text-[11px] leading-5 text-archive-muted">
+        결제하면 <Link href="/terms" className="underline">이용약관</Link> 및 <Link href="/refund" className="underline">환불 안내</Link>에 동의한 것으로 봅니다.
+      </p>
+      {process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY?.startsWith("test_") ? (
+        <p className="mt-3 text-center text-[11px] leading-5 text-archive-muted">테스트 키를 사용하면 실제 금액은 차감되지 않습니다.</p>
+      ) : null}
     </section>
   );
 }

@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { POST } from "./route";
 
 const { track } = vi.hoisted(() => ({ track: vi.fn() }));
+const consumeApiRateLimit = vi.hoisted(() => vi.fn());
 
 vi.mock("next/headers", () => ({
   cookies: vi.fn(async () => ({ get: () => ({ value: "server-session" }) })),
@@ -11,8 +12,13 @@ vi.mock("next/headers", () => ({
 vi.mock("@/lib/analytics/analyticsProvider", () => ({
   getAnalyticsRepository: () => ({ track }),
 }));
+vi.mock("@/lib/security/apiRateLimit", () => ({ consumeApiRateLimit }));
 
 describe("POST /api/analytics", () => {
+  beforeEach(() => {
+    consumeApiRateLimit.mockResolvedValue({ allowed: true, retryAfterSeconds: 0 });
+  });
+
   it("rejects an unknown event without writing it", async () => {
     track.mockClear();
     const response = await POST(new Request("http://localhost/api/analytics", {
@@ -42,5 +48,17 @@ describe("POST /api/analytics", () => {
 
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ message: "analytics is temporarily unavailable" });
+  });
+
+  it("drops excessive analytics events before storage", async () => {
+    track.mockClear();
+    consumeApiRateLimit.mockResolvedValue({ allowed: false, retryAfterSeconds: 30 });
+
+    const response = await POST(new Request("http://localhost/api/analytics", {
+      method: "POST", body: JSON.stringify({ name: "landing_view" }),
+    }));
+
+    expect(response.status).toBe(429);
+    expect(track).not.toHaveBeenCalled();
   });
 });
