@@ -7,14 +7,22 @@ const upsertContent = vi.hoisted(() => vi.fn());
 const getBalance = vi.hoisted(() => vi.fn());
 const getUnlockedContents = vi.hoisted(() => vi.fn());
 const unlockContent = vi.hoisted(() => vi.fn());
+const claimSession = vi.hoisted(() => vi.fn());
+const isSessionOwnedByUser = vi.hoisted(() => vi.fn());
+const grantUserAccess = vi.hoisted(() => vi.fn());
 const generateStoryWithOpenAI = vi.hoisted(() => vi.fn());
 const acquireContentGeneration = vi.hoisted(() => vi.fn());
 const releaseContentGeneration = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/serverClient", () => ({ getAuthenticatedUser }));
-vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ getBalance, getUnlockedContents, unlockContent }) }));
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(async () => ({ get: () => ({ value: "anon_current" }) })),
+}));
+vi.mock("@/lib/auth/accountRepository", () => ({
+  getAccountRepository: () => ({ getBalance, getUnlockedContents, unlockContent, claimSession, isSessionOwnedByUser }),
+}));
 vi.mock("@/lib/repository/repositoryProvider", () => ({
-  getSoulRepository: () => ({ getResult, getContent, upsertContent }),
+  getSoulRepository: () => ({ getResult, getContent, upsertContent, grantUserAccess }),
 }));
 vi.mock("@/app/api/_lib/openAiStoryProvider", () => ({
   createStoryCacheKey: () => "generation-key",
@@ -39,10 +47,13 @@ const story = {
   readingTimeMinutes: 4,
 };
 
-function request(body: object) {
+function request(body: object, resultToken = "") {
   return new Request("http://localhost/api/soul/unlock", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(resultToken ? { "X-Result-Token": resultToken } : {}),
+    },
     body: JSON.stringify(body),
   });
 }
@@ -50,7 +61,11 @@ function request(body: object) {
 describe("POST /api/soul/unlock", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getResult.mockReset();
     getUnlockedContents.mockResolvedValue([]);
+    isSessionOwnedByUser.mockResolvedValue(true);
+    claimSession.mockResolvedValue({ claimed: true });
+    grantUserAccess.mockResolvedValue(undefined);
     acquireContentGeneration.mockResolvedValue(true);
     releaseContentGeneration.mockResolvedValue(undefined);
   });
@@ -66,6 +81,60 @@ describe("POST /api/soul/unlock", () => {
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toMatchObject({ code: "AUTH_REQUIRED" });
+  });
+
+  it("repairs account access created after the user was already logged in", async () => {
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    getResult
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} });
+    getBalance.mockResolvedValue(3);
+    getContent.mockResolvedValue({ content: story });
+    unlockContent.mockResolvedValue({ balance: 2, charged: true });
+
+    const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }));
+
+    expect(response.status).toBe(200);
+    expect(isSessionOwnedByUser).toHaveBeenCalledWith("anon_current", "user-id");
+    expect(claimSession).toHaveBeenCalledWith("anon_current", "user-id");
+    expect(getResult).toHaveBeenLastCalledWith("sp_test", undefined, undefined, "user-id");
+  });
+
+  it("accepts a valid result token without trusting an unrelated browser session", async () => {
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    isSessionOwnedByUser.mockResolvedValue(false);
+    getResult
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} })
+      .mockResolvedValueOnce({ profile: { id: "sp_test", soulHash: "hash" }, freeContent: {} });
+    getBalance.mockResolvedValue(3);
+    getContent.mockResolvedValue({ content: story });
+    unlockContent.mockResolvedValue({ balance: 2, charged: true });
+
+    const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }, "valid-token"));
+
+    expect(response.status).toBe(200);
+    expect(claimSession).not.toHaveBeenCalled();
+    expect(getResult).toHaveBeenNthCalledWith(1, "sp_test", undefined, undefined, "user-id");
+    expect(getResult).toHaveBeenNthCalledWith(2, "sp_test", expect.any(String));
+    expect(grantUserAccess).toHaveBeenCalledWith("sp_test", "user-id");
+    expect(getResult).toHaveBeenLastCalledWith("sp_test", undefined, undefined, "user-id");
+  });
+
+  it("does not repair access from a browser session owned by another account", async () => {
+    getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
+    getResult.mockResolvedValue(null);
+    isSessionOwnedByUser.mockResolvedValue(false);
+
+    const response = await POST(request({ profileId: "sp_test", contentType: "last_day" }));
+
+    expect(response.status).toBe(404);
+    expect(claimSession).not.toHaveBeenCalled();
+    expect(unlockContent).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({
+      code: "RESULT_NOT_FOUND",
+      message: "이 전생 결과에 접근할 수 없습니다. 결과 페이지를 다시 열어주세요.",
+    });
   });
 
   it("opens a selected record with the user's account balance", async () => {

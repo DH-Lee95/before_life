@@ -6,6 +6,7 @@ export function createMemorySoulRepository(): SoulRepository {
   const profilesByHash = new Map<string, StoredSoulProfile>();
   const profilesById = new Map<string, StoredSoulProfile>();
   const contents = new Map<string, SoulContent>();
+  const userAccess = new Map<string, Set<string>>();
 
   return {
     async upsertProfile({ profile, anonymousSessionId, resultTokenHash }) {
@@ -33,6 +34,11 @@ export function createMemorySoulRepository(): SoulRepository {
       profilesById.set(id, stored);
       return stored;
     },
+    async grantUserAccess(profileId, userId) {
+      const profileUsers = userAccess.get(profileId) ?? new Set<string>();
+      profileUsers.add(userId);
+      userAccess.set(profileId, profileUsers);
+    },
     async upsertContent({ soulProfileId, contentType, content, generationKey }) {
       const key = createContentKey(soulProfileId, contentType, generationKey);
       const existing = contents.get(key);
@@ -54,7 +60,7 @@ export function createMemorySoulRepository(): SoulRepository {
     async getContent(soulProfileId, contentType, generationKey) {
       return contents.get(createContentKey(soulProfileId, contentType, generationKey)) ?? null;
     },
-    async getResult(profileId, resultTokenHash, anonymousSessionId) {
+    async getResult(profileId, resultTokenHash, anonymousSessionId, userId) {
       const profile = profilesById.get(profileId);
       if (!profile) {
         return null;
@@ -62,7 +68,8 @@ export function createMemorySoulRepository(): SoulRepository {
 
       const hasToken = resultTokenHash ? profile.resultTokenHashes.includes(resultTokenHash) : false;
       const hasSession = anonymousSessionId ? profile.anonymousSessionIds.includes(anonymousSessionId) : false;
-      if (!hasToken && !hasSession) {
+      const hasUser = userId ? userAccess.get(profileId)?.has(userId) === true : false;
+      if (!hasToken && !hasSession && !hasUser) {
         return null;
       }
 

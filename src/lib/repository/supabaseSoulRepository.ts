@@ -29,6 +29,7 @@ export type SupabaseSoulStore = {
   upsertProfile: (row: UpsertProfileRow) => Promise<SupabaseProfileRow>;
   grantSessionAccess: (profileId: string, anonymousSessionRowId: string) => Promise<void>;
   grantTokenAccess: (profileId: string, resultTokenHash: string) => Promise<void>;
+  grantUserAccess: (profileId: string, userId: string) => Promise<void>;
   upsertContent: (row: SupabaseContentRow) => Promise<SupabaseContentRow>;
   getContent: (profileId: string, contentType: SoulContentType, generationKey: string) => Promise<SupabaseContentRow | null>;
   getProfile: (profileId: string) => Promise<SupabaseProfileRow | null>;
@@ -61,6 +62,9 @@ export function createSupabaseSoulRepository(store: SupabaseSoulStore): SoulRepo
     async upsertContent(input) {
       const row = await store.upsertContent(toContentRow(input));
       return toSoulContent(row);
+    },
+    async grantUserAccess(profileId, userId) {
+      await store.grantUserAccess(profileId, userId);
     },
     async getContent(profileId, contentType, generationKey) {
       const row = await store.getContent(profileId, contentType, generationKey ?? "default");

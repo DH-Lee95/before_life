@@ -28,6 +28,7 @@ function createStore(overrides: Partial<SupabaseSoulStore> = {}): SupabaseSoulSt
     }),
     grantSessionAccess: vi.fn().mockResolvedValue(undefined),
     grantTokenAccess: vi.fn().mockResolvedValue(undefined),
+    grantUserAccess: vi.fn().mockResolvedValue(undefined),
     upsertContent: vi.fn(),
     getContent: vi.fn().mockResolvedValue(null),
     getProfile: vi.fn().mockResolvedValue(null),
@@ -90,6 +91,15 @@ describe("createSupabaseSoulRepository", () => {
       createdAt: row.created_at,
     });
     expect(result?.profile.id).toBe(row.id);
+  });
+
+  it("persists account access only through the repository abstraction", async () => {
+    const store = createStore();
+    const repository = createSupabaseSoulRepository(store);
+
+    await repository.grantUserAccess("sp_profile", "user-id");
+
+    expect(store.grantUserAccess).toHaveBeenCalledWith("sp_profile", "user-id");
   });
 
   it("does not read a profile when no credential grants access", async () => {

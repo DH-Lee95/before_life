@@ -23,6 +23,20 @@ describe("createMemorySoulRepository", () => {
     await expect(repo.getResult(stored.id, undefined, "stranger")).resolves.toBeNull();
   });
 
+  it("allows a verified result to be attached to an authenticated account", async () => {
+    const repo = createMemorySoulRepository();
+    const profile = createSoulProfile({
+      nickname: "서연", birthDate: "1994-11-18",
+      answers: { inner_response: "a", decision_pattern: "b", emotional_trace: "c", conflict_style: "d", hidden_desire: "e", repeated_theme: "f", decisive_choice: "b" },
+    });
+    const stored = await repo.upsertProfile({ profile, anonymousSessionId: "owner", resultTokenHash: "hash" });
+
+    await repo.grantUserAccess(stored.id, "user-id");
+
+    expect((await repo.getResult(stored.id, undefined, undefined, "user-id"))?.profile.id).toBe(stored.id);
+    await expect(repo.getResult(stored.id, undefined, undefined, "other-user")).resolves.toBeNull();
+  });
+
   it("stores generated stories separately by prompt-version cache key", async () => {
     const repo = createMemorySoulRepository();
     const profile = createSoulProfile({

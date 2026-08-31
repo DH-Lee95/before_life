@@ -455,6 +455,7 @@ describe("ResultView", () => {
     expect(screen.getAllByText("2소울 보유")).not.toHaveLength(0);
     expect(fetch).toHaveBeenCalledWith("/api/soul/unlock", expect.objectContaining({
       method: "POST",
+      headers: { "Content-Type": "application/json", "X-Result-Token": "shared_token" },
       body: JSON.stringify({ profileId: "sp_test", contentType: "last_day" }),
     }));
 

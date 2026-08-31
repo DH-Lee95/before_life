@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import { getAccountRepository } from "@/lib/auth/accountRepository";
+import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { createFreeResult } from "@/lib/content/createFreeResult";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
 import { ANONYMOUS_SESSION_COOKIE, anonymousSessionCookieOptions, createAnonymousSessionId } from "@/lib/session/anonymousSession";
@@ -9,8 +11,17 @@ import { createSoulProfile } from "@/lib/soul/createSoulProfile";
 import { validateSoulInput } from "@/lib/soul/validateSoulInput";
 
 export async function POST(request: Request) {
+  let body;
   try {
-    const body = validateSoulInput(await request.json());
+    body = validateSoulInput(await request.json());
+  } catch (error) {
+    return NextResponse.json(
+      { message: error instanceof Error ? error.message : "invalid soul input" },
+      { status: 400 },
+    );
+  }
+
+  try {
     const profile = createSoulProfile(body);
     const resultToken = createResultToken();
     const resultTokenHash = hashResultToken(resultToken);
@@ -35,6 +46,11 @@ export async function POST(request: Request) {
       content: createFreeResult(storedProfile),
     });
 
+    const user = await getAuthenticatedUser().catch(() => null);
+    if (user) {
+      await getAccountRepository().claimSession(anonymousSessionId, user.id);
+    }
+
     return NextResponse.json({
       profileId: storedProfile.id,
       resultToken,
@@ -43,9 +59,10 @@ export async function POST(request: Request) {
       freeContent,
     });
   } catch (error) {
+    console.error("Failed to create and link soul result", error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "failed to create soul profile" },
-      { status: 400 },
+      { message: "결과를 계정에 연결하지 못했습니다. 잠시 후 다시 시도해주세요." },
+      { status: 503 },
     );
   }
 }

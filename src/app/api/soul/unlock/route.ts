@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { createStoryCacheKey, generateStoryWithOpenAI } from "@/app/api/_lib/openAiStoryProvider";
@@ -9,6 +10,8 @@ import { getAuthenticatedUser } from "@/lib/auth/serverClient";
 import { createStoryGenerationPrompt, createWholeLifeGenerationPrompt } from "@/lib/content/createStoryGenerationPrompt";
 import { acquireContentGeneration, releaseContentGeneration } from "@/lib/content/contentGenerationLock";
 import { getSoulRepository } from "@/lib/repository/repositoryProvider";
+import { ANONYMOUS_SESSION_COOKIE } from "@/lib/session/anonymousSession";
+import { hashResultToken } from "@/lib/session/resultToken";
 import type { LockedContentType, SoulContentType } from "@/types/soul";
 
 export const runtime = "nodejs";
@@ -29,15 +32,36 @@ export async function POST(request: Request) {
     }
 
     const repository = getSoulRepository();
-    const result = await repository.getResult(profileId, undefined, undefined, user.id);
-    if (!result) return NextResponse.json({ message: "result not found" }, { status: 404 });
+    const accountRepository = getAccountRepository();
+    const resultToken = request.headers.get("X-Result-Token");
+    const resultTokenHash = resultToken ? hashResultToken(resultToken) : undefined;
+    let result = await repository.getResult(profileId, undefined, undefined, user.id);
+    if (!result) {
+      const anonymousSessionId = (await cookies()).get(ANONYMOUS_SESSION_COOKIE)?.value;
+      if (anonymousSessionId && await accountRepository.isSessionOwnedByUser(anonymousSessionId, user.id)) {
+        await accountRepository.claimSession(anonymousSessionId, user.id);
+        result = await repository.getResult(profileId, undefined, undefined, user.id);
+      }
+    }
+    if (!result && resultTokenHash) {
+      const tokenResult = await repository.getResult(profileId, resultTokenHash);
+      if (tokenResult) {
+        await repository.grantUserAccess(profileId, user.id);
+        result = await repository.getResult(profileId, undefined, undefined, user.id);
+      }
+    }
+    if (!result) {
+      return NextResponse.json({
+        message: "이 전생 결과에 접근할 수 없습니다. 결과 페이지를 다시 열어주세요.",
+        code: "RESULT_NOT_FOUND",
+      }, { status: 404 });
+    }
 
     const prompt = contentType === "whole_life"
       ? createWholeLifeGenerationPrompt(result.profile)
       : createStoryGenerationPrompt(result.profile, contentType);
     const generationKey = createStoryCacheKey(result.profile.soulHash, contentType, prompt.version);
     const cost = contentType === "whole_life" ? contentCosts.wholeLife : contentCosts.deepRecord;
-    const accountRepository = getAccountRepository();
     const existingUnlock = (await accountRepository.getUnlockedContents(user.id, profileId)).find(
       (item) => item.contentType === contentType,
     );

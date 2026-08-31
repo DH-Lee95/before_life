@@ -27,6 +27,7 @@ export type StoredSoulResult = {
 
 export type SoulRepository = {
   upsertProfile: (input: UpsertProfileInput) => Promise<StoredSoulProfile>;
+  grantUserAccess: (profileId: string, userId: string) => Promise<void>;
   upsertContent: (input: UpsertContentInput) => Promise<SoulContent>;
   getContent: (soulProfileId: string, contentType: SoulContentType, generationKey?: string) => Promise<SoulContent | null>;
   getResult: (profileId: string, resultTokenHash?: string, anonymousSessionId?: string, userId?: string) => Promise<StoredSoulResult | null>;

@@ -91,6 +91,14 @@ export function createSupabaseRestStore({
         user_id: null,
       });
     },
+    async grantUserAccess(profileId, userId) {
+      await grantAccess({
+        soul_profile_id: profileId,
+        anonymous_session_id: null,
+        result_token_hash: null,
+        user_id: userId,
+      });
+    },
     async upsertContent(row) {
       return await upsertOne<SupabaseContentRow>(
         "soul_contents",

@@ -222,9 +222,13 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
 
       while (true) {
         try {
+          const resultToken = getResultToken(profileId, legacyToken);
           response = await fetch("/api/soul/unlock", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...(resultToken ? { "X-Result-Token": resultToken } : {}),
+            },
             body: JSON.stringify({ profileId, contentType }),
           });
           data = await response.json().catch(() => ({})) as typeof data;
