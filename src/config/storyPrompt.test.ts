@@ -10,13 +10,17 @@ describe("story prompt config", () => {
     expect(STORY_SYSTEM_PROMPT).toContain("첫 문장부터 구체적인 장면");
     expect(STORY_SYSTEM_PROMPT).toContain("조사와 어미");
     expect(STORY_SYSTEM_PROMPT).toContain("조용히 한 번 고쳐 쓴다");
-    expect(STORY_PROMPT_VERSION).toBe("story-prompt.2026-08-31.v8");
+    expect(STORY_PROMPT_VERSION).toBe("story-prompt.2026-09-01.v9");
     expect(STORY_SYSTEM_PROMPT).toContain("직업은 배경 정보로만");
     expect(STORY_SYSTEM_PROMPT).toContain("성격과 관계에서의 선택");
     expect(STORY_SYSTEM_PROMPT).toContain("갈등이 커지고");
     expect(STORY_SYSTEM_PROMPT).toContain("중학생이 한 번에 읽고 이해할 수 있는 수준");
     expect(STORY_SYSTEM_PROMPT).toContain("한 문장은 되도록 60자 안팎");
     expect(STORY_SYSTEM_PROMPT).toContain("그 사람, 그것, 기록, 증거");
+    expect(STORY_SYSTEM_PROMPT).toContain("10대 후반부터 30대 초반");
+    expect(STORY_SYSTEM_PROMPT).toContain("권한을 가진 사람");
+    expect(STORY_SYSTEM_PROMPT).toContain("큰 손실");
+    expect(STORY_SYSTEM_PROMPT).toContain("인물의 직책과 잘못, 피해를 구체적으로");
     expect(STORY_SYSTEM_PROMPT).not.toContain('{\n  "title"');
     expect(STORY_OUTPUT_FORMAT.type).toBe("json_schema");
     expect(STORY_OUTPUT_FORMAT.strict).toBe(true);

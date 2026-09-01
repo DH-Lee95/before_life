@@ -22,7 +22,7 @@ describe("validateGeneratedStory", () => {
   it("rejects known broken combinations and builds a compact repair prompt", () => {
     const broken = {
       ...validStory,
-      opening: "기록원였던 당신에게 내 이름으로 선택하고 싶은 마음이라는 감정이 남았습니다.",
+      opening: "기록원였던 당신은 문 앞에 서었습니다. 내 이름으로 선택하고 싶은 마음이라는 감정이 남았습니다.",
     };
     const result = validateGeneratedStory(broken);
 
@@ -80,6 +80,26 @@ describe("validateGeneratedStory", () => {
     expect(result.success).toBe(false);
     if (result.success) return;
     expect(result.issues).toContain("한 문장이 너무 길어 내용을 한 번에 이해하기 어렵습니다.");
+  });
+
+  it("rejects vague official-sounding phrases that hide who did what", () => {
+    const broken = {
+      ...validStory,
+      chapters: validStory.chapters.map((chapter, index) => index === 1 ? {
+        ...chapter,
+        paragraphs: [
+          "오래전 권한을 가진 사람의 잘못으로 큰 손실이 생겼습니다. 당신은 힘없는 그 사람에게 책임을 돌렸습니다.",
+          chapter.paragraphs[1],
+        ],
+      } : chapter),
+    };
+
+    const result = validateGeneratedStory(broken);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.issues).toContain("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
+    expect(createStoryRepairPrompt(broken, result.issues)).toContain("직책·잘못·피해");
   });
 
   it("accepts a complete chronological whole-life story", () => {

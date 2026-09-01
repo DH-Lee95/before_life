@@ -59,7 +59,8 @@ describe("createFreeResult", () => {
     const renderedText = JSON.stringify(content);
     expect(renderedText).not.toMatch(/자신의 고백과 증거|침묵의 대가|모든 기록/);
     expect(renderedText).not.toMatch(/감정의 결|관계의 온도|판을 읽고|자신만의 결/);
-    expect(renderedText).not.toMatch(/기록원였던|재봉사이었던|생활으로|마음이라는 감정|약속이라는 감정|내 이름으로 선택|였던 살아가기|의 길로 들어선 계기/);
+    expect(renderedText).not.toMatch(/기록원였던|재봉사이었던|생활으로|마음이라는 감정|약속이라는 감정|내 이름으로 선택|였던 살아가기|의 길로 들어선 계기|서었습니다/);
+    expect(renderedText).not.toMatch(/권한을 가진 사람|큰 손실|힘없는 그 사람|대가를 제자리로 돌려놓|생활의 균형|이 기록의 핵심/);
   });
 
   it("creates the same structured stories for the same soul profile", () => {
@@ -96,6 +97,7 @@ describe("createFreeResult", () => {
 
       expect(occupationMentions).toBeLessThanOrEqual(1);
       expect(storyText).toMatch(/숨기|비밀|진실|선택|대가/);
+      expect(storyText).not.toMatch(/권한을 가진 사람|큰 손실|힘없는 그 사람|대가를 제자리로 돌려놓|서었습니다/);
     }
   });
 

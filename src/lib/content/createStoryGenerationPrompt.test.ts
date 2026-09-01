@@ -39,6 +39,11 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("사건과 사람을 처음 언급할 때 정체를 바로 설명");
     expect(prompt.user).toContain("두 사람의 욕망과 두려움");
     expect(prompt.user).toContain("가까워짐 → 갈등의 폭발 → 되돌릴 수 없는 선택과 여운");
+    expect(prompt.user).toContain("성공 기준");
+    expect(prompt.user).toContain("주인공이 원하는 것");
+    expect(prompt.user).toContain("갈등을 일으킨 사건");
+    expect(prompt.user).toContain("스스로 고른 행동");
+    expect(prompt.user).toContain("선택 뒤에 실제로 달라진 것");
     expect(prompt.user).not.toContain(profile.soulHash);
   });
 
@@ -92,6 +97,9 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("유년기 → 청년기 → 중년기 → 말년기");
     expect(prompt.user).toContain("기존의 깊은 기록과 같은 한 사람");
     expect(prompt.user).toContain("사건의 원인과 결과");
+    expect(prompt.user).toContain("각 장의 성공 기준");
+    expect(prompt.user).toContain("이전 장의 결과");
+    expect(prompt.user).toContain("새로운 문제");
     expect(prompt.outputFormat.schema.properties.chapters.minItems).toBe(4);
     expect(prompt.outputFormat.schema.properties.chapters.maxItems).toBe(4);
   });

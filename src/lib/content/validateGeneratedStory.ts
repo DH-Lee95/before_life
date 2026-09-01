@@ -11,6 +11,15 @@ const BROKEN_KOREAN_PATTERNS = [
   /약속이라는 감정/,
   /작품이라는 감정/,
   /내 이름으로 선택/,
+  /서었습니다/,
+];
+
+const VAGUE_OFFICIAL_PATTERNS = [
+  /권한을 가진 사람/,
+  /큰 손실/,
+  /힘없는 그 사람/,
+  /혼란이 생겼/,
+  /대가를 제자리로 돌려놓/,
 ];
 
 export type StoryValidationResult =
@@ -53,6 +62,9 @@ export function validateGeneratedStory(value: unknown): StoryValidationResult {
   const serialized = JSON.stringify(value);
   if (BROKEN_KOREAN_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("부자연스러운 한국어 결합이 포함되어 있습니다.");
+  }
+  if (VAGUE_OFFICIAL_PATTERNS.some((pattern) => pattern.test(serialized))) {
+    issues.push("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
   }
   issues.push(...findReadabilityIssues(value));
 
@@ -106,6 +118,9 @@ export function validateGeneratedWholeLife(value: unknown): WholeLifeValidationR
   if (BROKEN_KOREAN_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("부자연스러운 한국어 결합이 포함되어 있습니다.");
   }
+  if (VAGUE_OFFICIAL_PATTERNS.some((pattern) => pattern.test(serialized))) {
+    issues.push("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
+  }
   issues.push(...findReadabilityIssues(value));
 
   if (issues.length > 0) return { success: false, issues: [...new Set(issues)] };
@@ -116,6 +131,7 @@ export function createStoryRepairPrompt(value: unknown, issues: string[]): strin
   return `아래 글의 내용과 JSON 구조는 유지하고, 지적된 문제만 고쳐서 완전한 JSON으로 다시 작성하라.
 새로운 인물이나 사건을 추가하지 말고 한국어 조사, 어미, 주어와 서술어의 호응을 자연스럽게 다듬어라.
 누가 무엇을 했는지 바로 이해되게 쓰고, 설명되지 않은 추상어는 원문에 이미 있는 구체적인 사람, 사건, 물건으로 바꿔라.
+권한·손실·혼란 같은 말로 뭉뚜그리지 말고 인물의 직책·잘못·피해를 눈에 보이듯 밝혀라.
 긴 문장은 핵심 행동이 하나씩 남도록 두 문장 이상으로 나눠라.
 
 [수정할 문제]
