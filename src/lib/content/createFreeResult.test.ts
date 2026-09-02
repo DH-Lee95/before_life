@@ -59,7 +59,7 @@ describe("createFreeResult", () => {
     expect(JSON.stringify(locked)).not.toContain("chapters");
     expect(content.sections.atmosphere).not.toContain("사람였습니다");
     expect(content.summary).toContain(profile.mainPastLife.occupation);
-    expect(content.selectionReasons).toEqual(profile.readingRationale);
+    expect(content).not.toHaveProperty("selectionReasons");
     const renderedText = JSON.stringify(content);
     expect(renderedText).not.toMatch(/자신의 고백과 증거|침묵의 대가|모든 기록/);
     expect(renderedText).not.toMatch(/감정의 결|관계의 온도|판을 읽고|자신만의 결/);
@@ -218,5 +218,28 @@ describe("createFreeResult", () => {
         }
       }
     }
+  });
+
+  it("makes the Scottish teacher's last day personal instead of repeating a generated premise", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
+    const archetype = soulArchetypes.find((item) => item.id === "scholar")!;
+    const baseProfile = createSoulProfile({
+      nickname: "서연", birthDate: "1994-11-18",
+      answers: { inner_response: "d", decision_pattern: "d", emotional_trace: "d", conflict_style: "d", hidden_desire: "f", repeated_theme: "e", decisive_choice: "b" },
+    });
+    const profile = {
+      ...baseProfile,
+      archetypeId: "scholar" as const,
+      recommendedContentType: "last_day" as const,
+      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      lifeCanon: createLifeCanon(scenario, "scholar", "b"),
+    };
+    const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
+    const text = JSON.stringify(story);
+
+    expect(text).toContain("당신의 질문을 귀찮아하지 않았던 어린 제자");
+    expect(text).toContain(scenario.signatureObject);
+    expect(text).not.toMatch(/학생 또는 농부|왜 그런 선택을 했는지|그 현실이 선택을 어렵게 했지만/);
+    expect(text.split(scenario.pressureSource)).toHaveLength(1);
   });
 });

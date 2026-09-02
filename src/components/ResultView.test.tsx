@@ -46,6 +46,7 @@ describe("ResultView", () => {
             content: {
               title: "전생 서랍",
               summary: "첫 번째 기록",
+              selectionReasons: ["사용자에게 노출하지 않을 내부 선택 근거"],
               natureSummary: {
                 headline: "당신은 중요한 마음을 오래 품는 사람입니다.",
                 signals: ["중요한 마음을 간직하는 편"],
@@ -97,6 +98,8 @@ describe("ResultView", () => {
     render(<ResultView profileId="sp_test" />);
 
     expect(await screen.findByText("카카오 로그인 필요")).toBeInTheDocument();
+    expect(screen.queryByText("왜 이 삶이 선택됐을까요?")).not.toBeInTheDocument();
+    expect(screen.queryByText("사용자에게 노출하지 않을 내부 선택 근거")).not.toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("카카오 인증을 앱 로그인으로 연결하지 못했습니다.");
     fireEvent.click(await screen.findByRole("button", { name: /이 기록 열기 · 1소울/ }));
     expect(window.confirm).toHaveBeenLastCalledWith("유료 콘텐츠를 이용하려면 카카오 로그인이 필요합니다. 카카오로 로그인하시겠습니까?");

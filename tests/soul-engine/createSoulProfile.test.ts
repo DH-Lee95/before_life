@@ -79,7 +79,7 @@ describe("createSoulProfile", () => {
     });
     expect(profile.lifeCanon.scenarioId).toBe(scenario?.id);
     expect(profile.lifeCanon.timeline).toHaveLength(4);
-    expect(profile.readingRationale).toHaveLength(3);
+    expect(profile).not.toHaveProperty("readingRationale");
   });
 
   it("lets strong answer patterns dominate the lightweight birth signal", () => {

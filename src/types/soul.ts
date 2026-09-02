@@ -124,7 +124,6 @@ export type SoulProfile = {
   natureSummary: NatureSummary;
   mainPastLife: PastLifeRecord;
   lifeCanon: LifeCanon;
-  readingRationale: string[];
   decisiveChoice: AnswerId;
   recommendedContentType: LockedContentType;
   discoveryPercent: number;
@@ -133,7 +132,6 @@ export type SoulProfile = {
 export type FreeResultContent = {
   title: string;
   summary: string;
-  selectionReasons: string[];
   natureSummary: NatureSummary;
   sections: {
     location: string;

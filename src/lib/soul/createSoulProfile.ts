@@ -44,7 +44,6 @@ export function createSoulProfile(input: SoulInput): SoulProfile {
     archetypeId: archetype.id,
     mainPastLife,
     lifeCanon,
-    readingRationale: createReadingRationale(traits, archetype.id, mainPastLife.occupation),
     decisiveChoice: normalized.answers.decisive_choice,
     recommendedContentType: getRecommendedContentType(normalized.answers.repeated_theme),
     discoveryPercent: 17,
@@ -104,24 +103,6 @@ function createArchetypeBoosts(answers: AnswerMap): Record<SoulArchetypeId, numb
   if (answers.inner_response === "c") add(["caretaker", "performer"], 18);
   if (answers.inner_response === "d") add(["scholar", "visionary", "artisan"], 18);
   return boosts;
-}
-
-function createReadingRationale(traits: SoulTraits, archetypeId: SoulArchetypeId, occupation: string): string[] {
-  const labels: Array<[keyof SoulTraits, string]> = [
-    ["relation", "사람과의 약속을 선택의 기준으로 둔 답변"], ["independence", "스스로 방향을 정하려는 답변"],
-    ["restraint", "중요한 마음을 오래 품는 답변"], ["ambition", "결과로 인정받고 싶은 답변"],
-    ["sensitivity", "작은 변화와 감정을 먼저 알아보는 답변"], ["longing", "지나간 장면의 의미를 놓지 않는 답변"],
-    ["vitality", "가능성을 보면 행동으로 옮기는 답변"],
-  ];
-  const top = labels.sort((a, b) => traits[b[0]] - traits[a[0]]).slice(0, 2).map((item) => item[1]);
-  const archetypeLabels: Record<SoulArchetypeId, string> = {
-    pioneer: "익숙한 안전보다 새로운 길을 택하는 원형", chronicler: "사라질 말과 기억을 지키는 원형",
-    caretaker: "사람의 빈자리와 필요를 먼저 살피는 원형", artisan: "자기 기준을 손에 잡히는 결과로 남기는 원형",
-    merchant: "신뢰와 현실적인 성과를 함께 보는 원형", wayfinder: "위험 속에서도 돌아갈 방향을 찾는 원형",
-    scholar: "사실을 확인하고 이해해야 마음이 놓이는 원형", steward: "공동체의 질서와 다음 계절을 준비하는 원형",
-    performer: "감정을 표현해 사람의 마음을 움직이는 원형", visionary: "아직 없는 방식을 현실로 옮기는 원형",
-  };
-  return [...top, `${archetypeLabels[archetypeId]}이 ${occupation}의 삶과 가장 자연스럽게 이어졌습니다.`];
 }
 
 const recommendedContentByTheme: Record<AnswerId, LockedContentType> = {

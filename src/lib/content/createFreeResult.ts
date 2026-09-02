@@ -8,7 +8,6 @@ export function createFreeResult(profile: SoulProfile): FreeResultContent {
   return {
     title: `${profile.nickname || "당신"}님의 전생 서랍`,
     summary: `${record.period} ${record.region}. 당신에게 이어진 대표 기록은 ${record.location}에서 ${asRole(record.occupation)} 살아간 ${genderLabel(record.gender)}의 삶입니다.${record.historicalContext ? ` ${record.historicalContext}` : ""}`,
-    selectionReasons: profile.readingRationale ?? [],
     natureSummary: profile.natureSummary,
     sections: {
       location: `${record.region}, ${record.location}`,
@@ -195,13 +194,13 @@ function createCanonDeepDive(
       };
     case "last_day":
       return {
-        opening: `${context}. 생의 마지막 중요한 날, 당신은 ${withObject(canon.sharedObject)} 꺼내 ${withObject(canon.keyRelationship)} 불러 달라고 했습니다. 남은 시간 안에 ${withObject(canon.secret)} 직접 설명해야 했습니다.`,
+        opening: `${context}. 기력이 기울던 어느 오후, 당신은 ${withObject(canon.sharedObject)} 곁에 두고 ${withObject(canon.keyRelationship)} 마지막으로 불러 달라는 전갈을 보냈습니다. 오래전의 선택이 누구를 지켰고 누구에게 상처를 남겼는지, 이번에는 숨김없이 말하기 위해서였습니다.`,
         chapters: [
-          { title: "마지막으로 돌아온 사람", paragraphs: [`그 사람은 용서하기 위해 온 것이 아니었습니다. ${canon.turningPoint}에 왜 그런 선택을 했는지 듣기 위해 왔습니다. 당신은 변명 대신 당시 가장 두려웠던 것이 ${canon.centralFear}이었다고 말했습니다.`, `${record.historicalContext} 그 현실이 선택을 어렵게 했지만, 다른 사람에게 남긴 상처까지 없던 일로 만들 수는 없었습니다.`] },
-          { title: "숨겨둔 사실과 물건", paragraphs: [`당신은 ${withObject(canon.sharedObject)} 건네며 ${withObject(canon.secret)} 차례로 설명했습니다. 무엇을 지키려 했고 결국 누가 어떤 몫을 잃었는지도 빠뜨리지 않았습니다.`, `${canon.decisiveAction} 그 선택이 너무 늦었더라도 진실을 결정할 권리를 원래 주인에게 돌려주는 일은 남아 있었습니다.`] },
-          { title: "용서 대신 남긴 것", paragraphs: [`그 사람은 곧바로 용서하지 않았습니다. 다만 이제 자신의 기억을 의심하지 않아도 된다고 말하며 당신 곁에 잠시 머물렀습니다.`, `${canon.finalDay} ${canon.legacy}`] },
+          { title: "문 앞에 선 사람", paragraphs: [`${withSubject(canon.keyRelationship)} 해가 기울 무렵 문 앞에 섰습니다. 두 사람은 ${withObject(record.meetingReason)} 계기로 가까워졌지만, 삶의 방향을 바꾼 사건 뒤에는 해야 할 말을 남긴 채 멀어졌습니다.`, `당신은 용서를 구하기 전에 먼저 사과했습니다. 가장 두려웠던 일은 ${asIdentity(canon.centralFear)}. 그 두려움 때문에 옳다고 믿은 선택을 하면서도, 그 결과를 함께 감당할 사람에게 충분히 설명하지 않았다고 인정했습니다.`] },
+          { title: "물건에 남은 기억", paragraphs: [`당신이 ${withObject(canon.sharedObject)} 펼치자 두 사람이 처음 나눈 약속과 그 뒤 달라진 삶의 흔적이 함께 드러났습니다. 당신은 기억나는 일을 시간순으로 말하되, 자신에게 유리한 대목만 골라내지 않았습니다.`, `그 물건은 결백을 증명하는 유품이 아니었습니다. 당신은 그 사람이 당시의 기억과 뒤늦게 알게 된 사정을 스스로 판단할 수 있도록 ${withObject(canon.sharedObject)} 건넸습니다.`] },
+          { title: "대답 대신 남은 시간", paragraphs: [`그 사람은 그 자리에서 용서한다고 말하지 않았습니다. 대신 밤이 깊을 때까지 곁에 앉아, 자신이 겪은 일과 당신이 미처 알지 못했던 상처를 차례로 들려주었습니다.`, `다음 날 동틀 무렵 당신은 조용히 숨을 거두었습니다. ${withSubject(canon.sharedObject)} 사과를 대신하지는 못했지만, 남은 사람이 자신의 기억을 의심하지 않게 하는 증거가 되었습니다. ${canon.legacy}`] },
         ],
-        presentMeaning: `${presentBridge} 모든 일을 정리한 뒤에야 마음을 말하려 하지 말고, 아직 바꿀 시간이 있을 때 잘못과 필요를 먼저 꺼내는 것이 관계를 지키는 선택이 될 수 있습니다.`, readingTimeMinutes: 4,
+        presentMeaning: `${presentBridge} 마지막의 고백이 앞선 침묵을 지우지는 않습니다. 관계를 잃을까 두려운 순간일수록 설명과 사과를 미루지 않는 것이 남길 수 있는 상처를 줄입니다.`, readingTimeMinutes: 4,
       };
     case "wealth_status":
       return {

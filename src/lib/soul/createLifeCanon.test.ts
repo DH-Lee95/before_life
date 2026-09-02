@@ -15,4 +15,12 @@ describe("createLifeCanon", () => {
     expect(canon.timeline[1].event).toContain("여행 동료와 가까워졌습니다");
     expect(canon.timeline[1].event).not.toContain("여행 동료과");
   });
+
+  it("uses one concrete relationship instead of exposing an unresolved option", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
+    const canon = createLifeCanon(scenario, "scholar", "b");
+
+    expect(canon.keyRelationship).toBe("당신의 질문을 귀찮아하지 않았던 어린 제자");
+    expect(JSON.stringify(canon)).not.toContain("또는");
+  });
 });
