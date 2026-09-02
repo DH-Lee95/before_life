@@ -81,7 +81,8 @@ describe("createFreeResult", () => {
 
     expect(text).toContain(profile.lifeCanon.keyRelationship);
     expect(text).toContain(profile.lifeCanon.sharedObject);
-    expect(text).toContain(profile.lifeCanon.turningPoint);
+    expect(text).toContain(profile.mainPastLife.pressureSource);
+    expect(text.split(profile.mainPastLife.pressureSource).length - 1).toBeLessThanOrEqual(1);
     expect(text).not.toContain("망가진 물건 하나");
     if (!profile.lifeCanon.historicalTerms.includes("정거장")) expect(text).not.toContain("정거장");
   });
@@ -240,6 +241,90 @@ describe("createFreeResult", () => {
     expect(text).toContain("당신의 질문을 귀찮아하지 않았던 어린 제자");
     expect(text).toContain(scenario.signatureObject);
     expect(text).not.toMatch(/학생 또는 농부|왜 그런 선택을 했는지|그 현실이 선택을 어렵게 했지만/);
-    expect(text.split(scenario.pressureSource)).toHaveLength(1);
+    expect(text.split(scenario.pressureSource)).toHaveLength(2);
+    expect(text.split(scenario.signatureObject).length - 1).toBeLessThanOrEqual(1);
+    expect(text).toContain("그 뒤 상대는 당신이 남긴 뜻을 이어갔습니다.");
+    expect(text).not.toContain("해야 할 말을 남긴 채 멀어졌습니다");
+    expect(text).toContain("서로의 상처를 충분히 말하지 못했습니다");
+  });
+
+  it("states the wealth conflict once instead of repeating the full premise", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "steward-greece-olive")!;
+    const archetype = soulArchetypes.find((item) => item.id === "steward")!;
+    const baseProfile = createSoulProfile({
+      nickname: "검수", birthDate: "1993-08-01",
+      answers: { inner_response: "a", decision_pattern: "b", emotional_trace: "a", conflict_style: "e", hidden_desire: "c", repeated_theme: "b", decisive_choice: "a" },
+    });
+    const profile = {
+      ...baseProfile, archetypeId: "steward" as const, recommendedContentType: "wealth_status" as const,
+      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      lifeCanon: createLifeCanon(scenario, "steward", "a"),
+    };
+    const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
+    const text = JSON.stringify(story);
+
+    expect(text.split(scenario.pressureSource).length - 1).toBeLessThanOrEqual(1);
+    expect(text).not.toContain("침묵의 대가");
+    expect(text).not.toContain("사랑하는 사람");
+  });
+
+  it("keeps present-influence actions assigned to the person who performed them", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
+    const archetype = soulArchetypes.find((item) => item.id === "scholar")!;
+    const baseProfile = createSoulProfile({
+      nickname: "검수", birthDate: "1990-05-24",
+      answers: { inner_response: "c", decision_pattern: "e", emotional_trace: "f", conflict_style: "c", hidden_desire: "e", repeated_theme: "f", decisive_choice: "f" },
+    });
+    const profile = {
+      ...baseProfile, archetypeId: "scholar" as const, recommendedContentType: "present_influence" as const,
+      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      lifeCanon: createLifeCanon(scenario, "scholar", "f"),
+    };
+    const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
+    const text = JSON.stringify(story);
+
+    expect(text).not.toContain("어린 제자를 믿게 된 이유도");
+    expect(text).not.toMatch(/충돌한 날\./);
+    expect(text.split(scenario.signatureObject).length - 1).toBeLessThanOrEqual(2);
+  });
+
+  it("makes the love conflict concrete without repeating the premise or demanding blind trust", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "pioneer-brazil-post")!;
+    const archetype = soulArchetypes.find((item) => item.id === "pioneer")!;
+    const baseProfile = createSoulProfile({
+      nickname: "검수", birthDate: "1992-07-16",
+      answers: { inner_response: "a", decision_pattern: "b", emotional_trace: "c", conflict_style: "b", hidden_desire: "a", repeated_theme: "a", decisive_choice: "b" },
+    });
+    const profile = {
+      ...baseProfile, archetypeId: "pioneer" as const, recommendedContentType: "past_love" as const,
+      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      lifeCanon: createLifeCanon(scenario, "pioneer", "b"),
+    };
+    const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
+    const text = JSON.stringify(story);
+
+    expect(text.split(scenario.pressureSource).length - 1).toBeLessThanOrEqual(1);
+    expect(text.split(scenario.signatureObject).length - 1).toBeLessThanOrEqual(1);
+    expect(text).not.toContain("사실보다 자신을 믿어 달라고");
+  });
+
+  it("makes the decisive choice readable without repeating a long abstract conflict", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "visionary-egypt-telegraph")!;
+    const archetype = soulArchetypes.find((item) => item.id === "visionary")!;
+    const baseProfile = createSoulProfile({
+      nickname: "검수", birthDate: "1988-07-27",
+      answers: { inner_response: "d", decision_pattern: "e", emotional_trace: "b", conflict_style: "b", hidden_desire: "d", repeated_theme: "c", decisive_choice: "a" },
+    });
+    const profile = {
+      ...baseProfile, archetypeId: "visionary" as const, recommendedContentType: "decisive_choice" as const,
+      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      lifeCanon: createLifeCanon(scenario, "visionary", "a"),
+    };
+    const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
+    const text = JSON.stringify(story);
+
+    expect(text.split(scenario.pressureSource).length - 1).toBeLessThanOrEqual(1);
+    expect(text.split(scenario.signatureObject).length - 1).toBeLessThanOrEqual(1);
+    expect(text).not.toMatch(/남은 삶을 갈랐|누군가의 몫이나 진실/);
   });
 });

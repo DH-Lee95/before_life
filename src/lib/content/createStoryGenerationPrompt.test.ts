@@ -33,16 +33,25 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain(profile.lifeCanon.turningPoint);
     expect(prompt.user).toContain(profile.lifeCanon.consequence);
     expect(prompt.user).toContain("정본과 모순되는 새 가족관계나 생애 사건을 만들지 말 것");
+    expect(prompt.user).toContain("주제가 마지막 날이 아니라면 말년이나 죽음으로 건너뛰지 말 것");
     expect(prompt.user).toContain("1,200~1,800자");
     expect(prompt.system).toContain("누가 무엇을 했고 왜 그런 선택을 했는지");
     expect(prompt.system).toContain("비유만으로 뜻을 대신하지 않는다");
     expect(prompt.user).toContain("익숙하고 직관적인 한국어");
     expect(prompt.user).toContain("상품명은 반복하지 않고");
+    expect(prompt.user).toContain("정본에 적힌 숫자·수량·색상·언어를 제목이나 본문에서 바꾸지 말 것");
+    expect(prompt.user).toContain("도입에서 물건을 가진 사람과 놓인 곳을 정한 뒤");
+    expect(prompt.user).toContain("같은 물건을 설명 없이 두 번 건네지 말 것");
     expect(prompt.user).toContain("직업에서 파생된 소품과 행동을 반복하지 말 것");
+    expect(prompt.user).toContain("생애를 잇는 물건을 이름까지 그대로 한 번");
+    expect(prompt.user).toContain("모든 서술문을 '~했습니다', '~였습니다' 계열의 존댓말");
     expect(prompt.user).toContain("주인공인 쉬운 단편소설");
     expect(prompt.user).toContain("사건과 사람을 처음 언급할 때 정체를 바로 설명");
+    expect(prompt.user).toContain("'전신 기사의 동료였던 라시드'처럼 직책을 겹치지 말고");
+    expect(prompt.user).toContain("함께 떠났거나 곁에 남은 인물을 다음 장에서 이유 없이 오래 피한 사람으로 바꾸지 말 것");
     expect(prompt.user).toContain("두 사람의 욕망과 두려움");
     expect(prompt.user).toContain("가까워짐 → 갈등의 폭발 → 되돌릴 수 없는 선택과 여운");
+    expect(prompt.user).toContain("'나를 믿어 달라'는 말만으로 갈등을 만들지 말 것");
     expect(prompt.user).toContain("성공 기준");
     expect(prompt.user).toContain("주인공이 원하는 것");
     expect(prompt.user).toContain("갈등을 일으킨 사건");
@@ -50,7 +59,7 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("선택 뒤에 실제로 달라진 것");
     expect(prompt.user).not.toContain(profile.soulHash);
     expect(prompt.qualityContext.requiredAnchors).toContain(profile.lifeCanon.sharedObject);
-    expect(prompt.qualityContext.requiredAnchors).toContain(profile.lifeCanon.turningPoint);
+    expect(prompt.qualityContext.requiredAnchors).toContain(profile.lifeCanon.sharedObject.split(" ").at(-1));
   });
 
   it("builds a family-bonds story around parents, children, and present-day patterns", () => {
@@ -70,6 +79,19 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("전생의 그 사람과 같은 사람이라고 환생했다고 단정하지 말 것");
   });
 
+  it("keeps a present-influence story in its own time window", () => {
+    const profile = createSoulProfile({
+      nickname: "서연", birthDate: "1994-11-18",
+      answers: { inner_response: "d", decision_pattern: "e", emotional_trace: "f", conflict_style: "c", hidden_desire: "e", repeated_theme: "f", decisive_choice: "f" },
+    });
+    const prompt = createStoryGenerationPrompt(profile, "present_influence");
+
+    expect(prompt.user).not.toContain("- 마지막 중요한 날:");
+    expect(prompt.user).toContain("한 시기의 일상 장면");
+    expect(prompt.user).toContain("설정에 없는 스승·연인·자녀");
+    expect(prompt.qualityContext.forbiddenTerms).toEqual(expect.arrayContaining(["말년", "숨을 거두", "죽음"]));
+  });
+
   it("gives the last-day story concrete stakes without graphic death", () => {
     const profile = createSoulProfile({
       nickname: "서연",
@@ -85,6 +107,20 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("죽음이 임박했다는 사실");
     expect(prompt.user).toContain("남은 시간의 제약 → 피하고 싶은 사람이나 진실과의 대면 → 마지막 선택과 대가");
     expect(prompt.user).toContain("잔혹하거나 신체를 세세하게 묘사하지 않음");
+    expect(prompt.user).toContain("과거에 이미 치른 대가를 마지막 날에 다시 일어난 결과처럼 쓰지 말 것");
+    expect(prompt.user).toContain("시대의 인물이 알 수 없는 내부 장기 진단");
+    expect(prompt.user).toContain("1장은 마지막 날의 재회, 2장은 '몇 년 전'이라고 밝힌 과거 사건");
+    expect(prompt.user).toContain("과거의 직장 갈등을 마지막 날에 새로 벌어지는 사건처럼 배치하지 말 것");
+    expect(prompt.user).toContain("마지막 날 찾아오는 중심 인물은 정본의 핵심 관계");
+    expect(prompt.user).toContain("이미 공개하거나 전달한 기록을 마지막 날까지 숨겼다고 바꾸지 말 것");
+    expect(prompt.user).toContain("핵심 관계는 선택 뒤에도 곁을 지킨 사람");
+    expect(prompt.user).toContain("오랫동안 헤어졌거나 주인공이 버리고 떠난 사람으로 바꾸지 말 것");
+    expect(prompt.user).toContain("2장의 과거 회상에서는 물건을 확인하거나 공개할 수 있지만 다른 사람에게 건네지 말 것");
+    expect(prompt.user).toContain("물건을 핵심 관계에게 건네는 장면은 3장에서 한 번만");
+    expect(prompt.user).toContain("이미 공개한 사건의 사실을 비밀이라고 하지 말고");
+    expect(prompt.user).toContain("설명하지 못한 영향과 감정을 마지막 고백으로 삼을 것");
+    expect(prompt.user).toContain("도입부터 생애를 잇는 물건은 주인공 곁에 둘 것");
+    expect(prompt.user).toContain("찾아온 인물이 그 물건을 가져오게 하지 말 것");
   });
 
   it("builds a longer chronological whole-life prompt from the same canon", () => {
@@ -104,6 +140,7 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("기존의 깊은 기록과 같은 한 사람");
     expect(prompt.user).toContain("사건의 원인과 결과");
     expect(prompt.user).toContain("각 장의 성공 기준");
+    expect(prompt.user).toContain("모든 서술문을 '~했습니다', '~였습니다' 계열의 존댓말로 통일할 것");
     expect(prompt.user).toContain("이전 장의 결과");
     expect(prompt.user).toContain("새로운 문제");
     expect(prompt.outputFormat.schema.properties.chapters.minItems).toBe(4);

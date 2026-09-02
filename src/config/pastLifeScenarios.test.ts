@@ -20,4 +20,10 @@ describe("pastLifeScenarios", () => {
   it("does not reuse scenario ids", () => {
     expect(new Set(pastLifeScenarios.map((scenario) => scenario.id)).size).toBe(pastLifeScenarios.length);
   });
+
+  it("does not treat pressed olive oil as seed stock", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "steward-greece-olive")!;
+
+    expect(JSON.stringify(scenario)).not.toContain("종자용 기름");
+  });
 });

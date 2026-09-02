@@ -16,7 +16,7 @@ const motives: Record<SoulArchetypeId, { desire: string; fear: string; relations
 };
 
 const actions: Record<AnswerId, string> = {
-  a: "사랑하는 사람에게 진실을 먼저 알리고 함께 선택했습니다.",
+  a: "가장 가까운 사람에게 사실을 먼저 알리고, 혼자 결론 내리지 않았습니다.",
   b: "불이익을 감수하고 자신이 확인한 사실을 공개했습니다.",
   c: "가족과 공동체가 함께 버틸 수 있는 대안을 만들어 설득했습니다.",
   d: "쌓아온 이름을 걸고 잘못된 요구를 공식적으로 거절했습니다.",
@@ -33,7 +33,7 @@ export function createLifeCanon(
   const turningPoint = `${scenario.pressureSource}의 요구가 ${scenario.signatureObject}에 남은 사실과 정면으로 충돌한 날`;
   const decisiveAction = actions[decisiveChoice] ?? actions.b;
   const consequence = "그 선택으로 익숙한 자리와 수입 일부를 잃었지만, 가장 가까운 사람과 자신의 기준은 지킬 수 있었습니다.";
-  const finalDay = `말년의 마지막 중요한 날, ${withObject(scenario.signatureObject)} 자신이 가장 믿는 사람에게 건네며 숨겼던 사실을 모두 설명했습니다.`;
+  const finalDay = `말년의 마지막 중요한 날, ${withObject(scenario.signatureObject)} 자신이 가장 믿는 사람에게 건네며 말하지 못한 마음과 선택이 남긴 영향을 설명했습니다.`;
 
   return {
     scenarioId: scenario.id,

@@ -40,7 +40,7 @@ export function validateStoryContinuity(
     issues.push(`한 생애의 정본을 잇는 핵심 물건이나 사건이 빠졌습니다: ${context.requiredAnchors.join(" / ")}`);
   }
   const foundForbidden = context.forbiddenTerms.find((term) => serialized.includes(term));
-  if (foundForbidden) issues.push(`시대 배경과 맞지 않는 표현이 포함되어 있습니다: ${foundForbidden}`);
+  if (foundForbidden) issues.push(`주제 또는 시대 배경과 맞지 않는 표현이 포함되어 있습니다: ${foundForbidden}`);
   return issues;
 }
 
@@ -79,6 +79,9 @@ export function validateGeneratedStory(value: unknown): StoryValidationResult {
   }
   if (VAGUE_OFFICIAL_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
+  }
+  if (collectNarrativeTexts(value).some((text) => /(?<!니)다\./.test(text))) {
+    issues.push("본문 서술은 '~했습니다' 계열의 존댓말로 통일해야 합니다.");
   }
   issues.push(...findReadabilityIssues(value));
 
@@ -135,6 +138,9 @@ export function validateGeneratedWholeLife(value: unknown): WholeLifeValidationR
   if (VAGUE_OFFICIAL_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
   }
+  if (collectNarrativeTexts(value).some((text) => /(?<!니)다\./.test(text))) {
+    issues.push("본문 서술은 '~했습니다' 계열의 존댓말로 통일해야 합니다.");
+  }
   issues.push(...findReadabilityIssues(value));
 
   if (issues.length > 0) return { success: false, issues: [...new Set(issues)] };
@@ -144,6 +150,7 @@ export function validateGeneratedWholeLife(value: unknown): WholeLifeValidationR
 export function createStoryRepairPrompt(value: unknown, issues: string[]): string {
   return `아래 글의 내용과 JSON 구조는 유지하고, 지적된 문제만 고쳐서 완전한 JSON으로 다시 작성하라.
 새로운 인물이나 사건을 추가하지 말고 한국어 조사, 어미, 주어와 서술어의 호응을 자연스럽게 다듬어라.
+모든 서술문은 '~했습니다', '~였습니다' 계열의 존댓말로 통일하라.
 누가 무엇을 했는지 바로 이해되게 쓰고, 설명되지 않은 추상어는 원문에 이미 있는 구체적인 사람, 사건, 물건으로 바꿔라.
 권한·손실·혼란 같은 말로 뭉뚜그리지 말고 인물의 직책·잘못·피해를 눈에 보이듯 밝혀라.
 긴 문장은 핵심 행동이 하나씩 남도록 두 문장 이상으로 나눠라.

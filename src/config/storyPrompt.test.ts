@@ -10,7 +10,7 @@ describe("story prompt config", () => {
     expect(STORY_SYSTEM_PROMPT).toContain("첫 문장부터 구체적인 장면");
     expect(STORY_SYSTEM_PROMPT).toContain("조사와 어미");
     expect(STORY_SYSTEM_PROMPT).toContain("조용히 한 번 고쳐 쓴다");
-    expect(STORY_PROMPT_VERSION).toBe("story-prompt.2026-09-02.v10");
+    expect(STORY_PROMPT_VERSION).toBe("story-prompt.2026-09-03.v16");
     expect(STORY_SYSTEM_PROMPT).toContain("직업은 배경 정보로만");
     expect(STORY_SYSTEM_PROMPT).toContain("성격과 관계에서의 선택");
     expect(STORY_SYSTEM_PROMPT).toContain("갈등이 커지고");

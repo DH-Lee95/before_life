@@ -23,4 +23,18 @@ describe("createLifeCanon", () => {
     expect(canon.keyRelationship).toBe("당신의 질문을 귀찮아하지 않았던 어린 제자");
     expect(JSON.stringify(canon)).not.toContain("또는");
   });
+
+  it("does not introduce an undefined lover through the decisive action", () => {
+    const canon = createLifeCanon(pastLifeScenarios[0], "pioneer", "a");
+
+    expect(canon.decisiveAction).not.toContain("사랑하는 사람");
+  });
+
+  it("keeps the final-day confession consistent with an earlier public choice", () => {
+    const canon = createLifeCanon(pastLifeScenarios[0], "pioneer", "b");
+
+    expect(canon.decisiveAction).toContain("공개했습니다");
+    expect(canon.finalDay).not.toContain("숨겼던 사실");
+    expect(canon.finalDay).toContain("말하지 못한 마음과 선택이 남긴 영향");
+  });
 });

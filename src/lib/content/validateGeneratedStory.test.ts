@@ -102,6 +102,19 @@ describe("validateGeneratedStory", () => {
     expect(createStoryRepairPrompt(broken, result.issues)).toContain("직책·잘못·피해");
   });
 
+  it("rejects casual narrative endings that clash with the product's polite voice", () => {
+    const broken = {
+      ...validStory,
+      opening: "해가 기울자 당신은 오래된 문 앞에 멈췄다. 기다리던 사람은 끝내 돌아오지 않았다.",
+    };
+
+    const result = validateGeneratedStory(broken);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.issues).toContain("본문 서술은 '~했습니다' 계열의 존댓말로 통일해야 합니다.");
+  });
+
   it("rejects stories that lose their shared canon or introduce anachronistic objects", () => {
     expect(validateStoryContinuity(validStory, {
       requiredAnchors: ["쪽빛 봉투", "편지를 되돌려준 밤"],
@@ -111,7 +124,10 @@ describe("validateGeneratedStory", () => {
     ]);
     expect(validateStoryContinuity({ ...validStory, opening: `${validStory.opening} 자동차를 타고 돌아왔습니다.` }, {
       requiredAnchors: [], forbiddenTerms: ["자동차", "전화"],
-    })).toEqual(["시대 배경과 맞지 않는 표현이 포함되어 있습니다: 자동차"]);
+    })).toEqual(["주제 또는 시대 배경과 맞지 않는 표현이 포함되어 있습니다: 자동차"]);
+    expect(validateStoryContinuity({ ...validStory, opening: `${validStory.opening} 낡은 봉투를 다시 펼쳤습니다.` }, {
+      requiredAnchors: ["쪽빛 봉투", "봉투"], forbiddenTerms: [],
+    })).toEqual([]);
   });
 
   it("accepts a complete chronological whole-life story", () => {
@@ -148,5 +164,25 @@ describe("validateGeneratedStory", () => {
     if (result.success) return;
     expect(result.issues).toContain("일생은 유년기, 청년기, 중년기, 말년기 순서의 정확히 4개 장이어야 합니다.");
     expect(result.issues).toContain("일생 본문의 분량이 3,000~5,500자 범위를 벗어났습니다.");
+  });
+
+  it("rejects casual narrative endings in a whole-life story", () => {
+    const paragraph = "낡은 창문으로 들어온 빛 아래에서 당신은 오래전 선택을 돌아보았습니다. 그 선택은 다음 계절의 관계와 생활을 조금씩 바꾸었습니다. ".repeat(8);
+    const broken = {
+      title: "한 사람의 생애",
+      opening: "항구의 종이 울리던 아침, 한 아이가 오래된 여관 다락방에서 바깥세상의 소리를 들었다. 그날의 기억은 오래 남았다.",
+      chapters: ["유년기", "청년기", "중년기", "말년기"].map((stage, index) => ({
+        stage,
+        title: `${index + 1}번째 삶의 계절`,
+        paragraphs: [paragraph, paragraph, paragraph],
+      })),
+      presentMeaning: "현재에도 자신의 기준을 찾으려는 경향으로 이어질 가능성이 있습니다.",
+      readingTimeMinutes: 10,
+    };
+
+    const result = validateGeneratedWholeLife(broken);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.issues).toContain("본문 서술은 '~했습니다' 계열의 존댓말로 통일해야 합니다.");
   });
 });
