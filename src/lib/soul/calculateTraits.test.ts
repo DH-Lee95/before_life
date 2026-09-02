@@ -50,4 +50,18 @@ describe("calculateTraits", () => {
     expect(freedom.independence).toBeGreaterThan(freedom.relation);
     expect(connection.relation).toBeGreaterThan(connection.independence);
   });
+
+  it("uses birth data as a light texture instead of overriding explicit answers", () => {
+    const answers = {
+      inner_response: "c", decision_pattern: "c", emotional_trace: "c", conflict_style: "b",
+      hidden_desire: "b", repeated_theme: "d", decisive_choice: "c",
+    } as const;
+    const lowBirth = calculateTraits(answers, { vitality: 35, relation: 35, ambition: 35, sensitivity: 35 });
+    const highBirth = calculateTraits(answers, { vitality: 80, relation: 80, ambition: 80, sensitivity: 80 });
+
+    expect(highBirth.relation - lowBirth.relation).toBeLessThanOrEqual(10);
+    expect(highBirth.sensitivity - lowBirth.sensitivity).toBeLessThanOrEqual(10);
+    expect(lowBirth.relation).toBeGreaterThan(lowBirth.independence);
+    expect(highBirth.relation).toBeGreaterThan(highBirth.independence);
+  });
 });

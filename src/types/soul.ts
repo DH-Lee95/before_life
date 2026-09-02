@@ -59,6 +59,7 @@ export type NatureSummary = {
 };
 
 export type PastLifeRecord = {
+  scenarioId: string;
   gender: Gender;
   period: string;
   region: string;
@@ -67,6 +68,33 @@ export type PastLifeRecord = {
   socialClass: string;
   hiddenNature: string;
   coreTheme: NarrativeTheme;
+  roleFamily: PastLifeRoleFamily;
+  historicalContext: string;
+  occupationPath: string;
+  workplaceDetail: string;
+  signatureObject: string;
+  meetingReason: string;
+  pressureSource: string;
+};
+
+export type PastLifeRoleFamily =
+  | "travel" | "records" | "care" | "craft" | "trade"
+  | "study" | "stewardship" | "performance" | "technology";
+
+export type LifeCanon = {
+  scenarioId: string;
+  centralDesire: string;
+  centralFear: string;
+  keyRelationship: string;
+  sharedObject: string;
+  secret: string;
+  turningPoint: string;
+  decisiveAction: string;
+  consequence: string;
+  legacy: string;
+  finalDay: string;
+  historicalTerms: string[];
+  timeline: Array<{ stage: WholeLifeStage; event: string }>;
 };
 
 export type NarrativeTheme = {
@@ -95,6 +123,8 @@ export type SoulProfile = {
   birthProfile: BirthProfile;
   natureSummary: NatureSummary;
   mainPastLife: PastLifeRecord;
+  lifeCanon: LifeCanon;
+  readingRationale: string[];
   decisiveChoice: AnswerId;
   recommendedContentType: LockedContentType;
   discoveryPercent: number;
@@ -103,6 +133,7 @@ export type SoulProfile = {
 export type FreeResultContent = {
   title: string;
   summary: string;
+  selectionReasons: string[];
   natureSummary: NatureSummary;
   sections: {
     location: string;

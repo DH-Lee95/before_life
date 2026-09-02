@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { asIdentity, asPastRole, asRole, withDirection, withObject } from "./koreanGrammar";
+import { asIdentity, asPastRole, asRole, withAnd, withDirection, withObject, withSubject } from "./koreanGrammar";
 
 describe("Korean grammar helpers", () => {
   it("selects particles from the final consonant", () => {
@@ -14,5 +14,10 @@ describe("Korean grammar helpers", () => {
     expect(withObject("가족과 공동체")).toBe("가족과 공동체를");
     expect(asIdentity("기록원")).toBe("기록원이었습니다");
     expect(asIdentity("재봉사")).toBe("재봉사였습니다");
+    expect(withSubject("나무패")).toBe("나무패가");
+    expect(withSubject("편지")).toBe("편지가");
+    expect(withSubject("마음")).toBe("마음이");
+    expect(withAnd("전보")).toBe("전보와");
+    expect(withAnd("마음")).toBe("마음과");
   });
 });

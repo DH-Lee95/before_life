@@ -6,7 +6,10 @@ export type StoryGenerationPrompt = {
   system: string;
   user: string;
   outputFormat: typeof STORY_OUTPUT_FORMAT;
+  qualityContext: StoryQualityContext;
 };
+
+export type StoryQualityContext = { requiredAnchors: string[]; forbiddenTerms: string[] };
 
 export type WholeLifeGenerationPrompt = Omit<StoryGenerationPrompt, "outputFormat"> & {
   outputFormat: typeof WHOLE_LIFE_OUTPUT_FORMAT;
@@ -39,6 +42,7 @@ export function createStoryGenerationPrompt(
     version: STORY_PROMPT_VERSION,
     system: STORY_SYSTEM_PROMPT,
     outputFormat: STORY_OUTPUT_FORMAT,
+    qualityContext: createQualityContext(profile),
     user: `아래 프로필을 바탕으로 '${storyFocusByContentType[contentType]}'을 작성하라.
 
 [대표 기록]
@@ -51,6 +55,7 @@ export function createStoryGenerationPrompt(
 - 숨은 성향: ${main.hiddenNature}
 - 핵심 정서: ${main.coreTheme.label}
 - 핵심 정서 설명: ${main.coreTheme.description}
+${createCanonBlock(profile)}
 
 [현생 성향]
 - 현생 입력 성별: ${genderLabel(profile.gender ?? main.gender)}
@@ -67,6 +72,7 @@ export function createStoryGenerationPrompt(
 - 사건과 사람을 처음 언급할 때 정체를 바로 설명하고, '그 사람', '그 일', '모든 기록', '대가'만으로 뜻을 대신하지 말 것
 - 한 문장에는 하나의 핵심 행동만 담고, 긴 원인과 결과는 짧은 두 문장으로 나눌 것
 - 직업은 시대적 정합성을 지키는 배경으로만 쓰고, 직업에서 파생된 소품과 행동을 반복하지 말 것
+- 정본과 모순되는 새 가족관계나 생애 사건을 만들지 말 것
 - 숨은 성향과 현재 성향 점수가 인물의 욕망, 오해, 갈등 대처, 결정적 선택으로 드러나게 할 것
 ${dramaticArcByContentType[contentType]}
 - 익숙하고 직관적인 한국어를 사용하고, 인물의 행동과 그 이유를 바로 이어서 설명
@@ -89,6 +95,7 @@ export function createWholeLifeGenerationPrompt(profile: SoulProfile): WholeLife
     version: STORY_PROMPT_VERSION,
     system: STORY_SYSTEM_PROMPT,
     outputFormat: WHOLE_LIFE_OUTPUT_FORMAT,
+    qualityContext: createQualityContext(profile),
     user: `아래 대표 기록을 바탕으로 한 사람의 생애 전체를 시간순으로 작성하라.
 이 글은 기존의 깊은 기록과 같은 한 사람, 같은 시대, 같은 지역, 같은 직업을 공유하는 정본(canon)이다.
 
@@ -103,6 +110,7 @@ export function createWholeLifeGenerationPrompt(profile: SoulProfile): WholeLife
 - 핵심 정서: ${main.coreTheme.label}
 - 핵심 정서 설명: ${main.coreTheme.description}
 - 위기에서 지키려는 가치 코드: ${profile.decisiveChoice}
+${createCanonBlock(profile)}
 
 [작성 조건]
 - 전체 3,500~5,000자, 예상 읽기 시간 8~12분
@@ -117,6 +125,7 @@ export function createWholeLifeGenerationPrompt(profile: SoulProfile): WholeLife
 - 분위기를 위한 묘사 뒤에는 실제로 무슨 일이 일어났는지 구체적인 행동으로 이어서 작성
 - 중년기에는 삶의 방향을 가른 선택을, 말년기에는 남긴 것과 미완의 감정을 포함
 - 깊은 기록은 이 생애에서 파생되는 장면별 외전이므로 시대·가족관계·직업·주요 사건을 서로 모순되게 만들지 않는다
+- 정본과 모순되는 새 가족관계나 생애 사건을 만들지 말 것
 - 프로필에 없는 고유명사는 최대 2개만 만들고 전체 생애에서 동일하게 사용
 - 마지막 현생 해석은 단정이나 예언 대신 가능성을 설명하는 말투로 작성
 
@@ -125,6 +134,40 @@ export function createWholeLifeGenerationPrompt(profile: SoulProfile): WholeLife
 - 청년기: 이전 장의 결과로 만난 사람과 처음 스스로 내린 선택
 - 중년기: 숨겨진 사실이 드러나고 관계와 생계를 흔드는 새로운 문제, 그리고 되돌릴 수 없는 선택
 - 말년기: 그 선택으로 실제 바뀐 관계와 삶, 마지막에도 남은 한 가지 마음`,
+  };
+}
+
+function createCanonBlock(profile: SoulProfile): string {
+  const canon = profile.lifeCanon;
+  if (!canon) return "";
+  return `
+[한 생애의 정본]
+- 직업을 갖게 된 경로: ${profile.mainPastLife.occupationPath}
+- 시대 생활 배경: ${profile.mainPastLife.historicalContext}
+- 중심 욕망: ${canon.centralDesire}
+- 가장 큰 두려움: ${canon.centralFear}
+- 핵심 관계: ${canon.keyRelationship}
+- 생애를 잇는 물건: ${canon.sharedObject}
+- 숨겨진 사실: ${canon.secret}
+- 중년의 전환점: ${canon.turningPoint}
+- 직접 내린 선택: ${canon.decisiveAction}
+- 선택의 실제 결과: ${canon.consequence}
+- 말년에 남긴 것: ${canon.legacy}
+- 마지막 중요한 날: ${canon.finalDay}
+- 시대에 맞는 어휘: ${canon.historicalTerms.join(", ")}`;
+}
+
+function createQualityContext(profile: SoulProfile): StoryQualityContext {
+  const canon = profile.lifeCanon;
+  if (!canon) return { requiredAnchors: [], forbiddenTerms: [] };
+  const century = Number(profile.mainPastLife.period.match(/\d+/)?.[0] ?? 20);
+  const candidates = ["자동차", "전화", "전기", "기차역", "철도", "전신", "사진", "영사기"];
+  const forbiddenTerms = century >= 20 ? [] : candidates.filter((term) => (
+    !canon.historicalTerms.some((allowed) => allowed.includes(term) || term.includes(allowed))
+  ));
+  return {
+    requiredAnchors: [canon.sharedObject, canon.turningPoint],
+    forbiddenTerms,
   };
 }
 

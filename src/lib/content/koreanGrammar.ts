@@ -32,6 +32,16 @@ export function withObject(value: string): string {
   return `${value}${finalIndex && finalIndex > 0 ? "을" : "를"}`;
 }
 
+export function withSubject(value: string): string {
+  const finalIndex = finalConsonantIndex(value);
+  return `${value}${finalIndex && finalIndex > 0 ? "이" : "가"}`;
+}
+
+export function withAnd(value: string): string {
+  const finalIndex = finalConsonantIndex(value);
+  return `${value}${finalIndex && finalIndex > 0 ? "과" : "와"}`;
+}
+
 export function asIdentity(value: string): string {
   const finalIndex = finalConsonantIndex(value);
   return `${value}${finalIndex && finalIndex > 0 ? "이었습니다" : "였습니다"}`;

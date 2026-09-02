@@ -30,6 +30,20 @@ export type WholeLifeValidationResult =
   | { success: true; data: WholeLifeNarrative }
   | { success: false; issues: string[] };
 
+export function validateStoryContinuity(
+  value: unknown,
+  context: { requiredAnchors: string[]; forbiddenTerms: string[] },
+): string[] {
+  const serialized = JSON.stringify(value);
+  const issues: string[] = [];
+  if (context.requiredAnchors.length > 0 && !context.requiredAnchors.some((anchor) => serialized.includes(anchor))) {
+    issues.push(`한 생애의 정본을 잇는 핵심 물건이나 사건이 빠졌습니다: ${context.requiredAnchors.join(" / ")}`);
+  }
+  const foundForbidden = context.forbiddenTerms.find((term) => serialized.includes(term));
+  if (foundForbidden) issues.push(`시대 배경과 맞지 않는 표현이 포함되어 있습니다: ${foundForbidden}`);
+  return issues;
+}
+
 export function validateGeneratedStory(value: unknown): StoryValidationResult {
   const issues: string[] = [];
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createStoryRepairPrompt, validateGeneratedStory, validateGeneratedWholeLife } from "./validateGeneratedStory";
+import { createStoryRepairPrompt, validateGeneratedStory, validateGeneratedWholeLife, validateStoryContinuity } from "./validateGeneratedStory";
 
 const validStory = {
   title: "끝까지 놓지 못한 사람",
@@ -100,6 +100,18 @@ describe("validateGeneratedStory", () => {
     if (result.success) return;
     expect(result.issues).toContain("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
     expect(createStoryRepairPrompt(broken, result.issues)).toContain("직책·잘못·피해");
+  });
+
+  it("rejects stories that lose their shared canon or introduce anachronistic objects", () => {
+    expect(validateStoryContinuity(validStory, {
+      requiredAnchors: ["쪽빛 봉투", "편지를 되돌려준 밤"],
+      forbiddenTerms: ["자동차", "전화"],
+    })).toEqual([
+      "한 생애의 정본을 잇는 핵심 물건이나 사건이 빠졌습니다: 쪽빛 봉투 / 편지를 되돌려준 밤",
+    ]);
+    expect(validateStoryContinuity({ ...validStory, opening: `${validStory.opening} 자동차를 타고 돌아왔습니다.` }, {
+      requiredAnchors: [], forbiddenTerms: ["자동차", "전화"],
+    })).toEqual(["시대 배경과 맞지 않는 표현이 포함되어 있습니다: 자동차"]);
   });
 
   it("accepts a complete chronological whole-life story", () => {

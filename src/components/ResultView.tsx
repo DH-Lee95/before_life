@@ -404,6 +404,14 @@ export function ResultView({ profileId, token: legacyToken = "" }: ResultViewPro
           <div><dt className="text-xs text-archive-bg/55">생활 공간</dt><dd className="mt-1 leading-6">{freeResult.sections.location}</dd></div>
           <div><dt className="text-xs text-archive-bg/55">기록 번호</dt><dd className="mt-1">{payload.profile.displaySoulId}</dd></div>
         </dl>
+        {freeResult.selectionReasons?.length ? (
+          <div className="mt-5 rounded-lg border border-archive-bg/15 bg-archive-bg/5 p-4">
+            <p className="text-xs font-semibold text-archive-card">왜 이 삶이 선택됐을까요?</p>
+            <ul className="mt-2 space-y-1.5 text-xs leading-5 text-archive-bg/75">
+              {freeResult.selectionReasons.map((reason) => <li key={reason}>· {reason}</li>)}
+            </ul>
+          </div>
+        ) : null}
       </article>
 
       <section className="rounded-lg border border-archive-line bg-archive-card p-5">

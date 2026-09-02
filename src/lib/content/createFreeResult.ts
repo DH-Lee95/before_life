@@ -1,18 +1,19 @@
 import { lockedContentTypes } from "@/config/contentTypes";
 import type { FreeResultContent, LockedContentType, SoulProfile, StoryNarrative } from "@/types/soul";
-import { asPastRole, asRole, withDirection, withObject } from "./koreanGrammar";
+import { asIdentity, asPastRole, asRole, withAnd, withDirection, withObject, withSubject } from "./koreanGrammar";
 
 export function createFreeResult(profile: SoulProfile): FreeResultContent {
   const record = profile.mainPastLife;
 
   return {
     title: `${profile.nickname || "당신"}님의 전생 서랍`,
-    summary: `당신의 대표 전생은 ${record.period} ${record.region}의 ${record.location}에서 ${genderLabel(record.gender)}으로, ${asRole(record.occupation)} 살아간 사람의 기록입니다.`,
+    summary: `${record.period} ${record.region}. 당신에게 이어진 대표 기록은 ${record.location}에서 ${asRole(record.occupation)} 살아간 ${genderLabel(record.gender)}의 삶입니다.${record.historicalContext ? ` ${record.historicalContext}` : ""}`,
+    selectionReasons: profile.readingRationale ?? [],
     natureSummary: profile.natureSummary,
     sections: {
       location: `${record.region}, ${record.location}`,
       occupation: record.occupation,
-      atmosphere: `${record.hiddenNature}이었습니다. ${record.coreTheme.description}`,
+      atmosphere: `${asPastRole(record.hiddenNature)} ${record.coreTheme.description}`,
       love: createLove(profile),
       success: createSuccess(profile),
       compatibility: createCompatibility(profile),
@@ -43,17 +44,18 @@ export function createFreeResult(profile: SoulProfile): FreeResultContent {
 
 function createWholeLifePreview(profile: SoulProfile): FreeResultContent["sections"]["wholeLife"] {
   const record = profile.mainPastLife;
+  const timeline = profile.lifeCanon?.timeline;
 
   return {
     id: "whole_life",
     title: "한 사람의 생애로 읽는 전생",
-    description: `${record.period} ${record.region}에서 태어나 ${asRole(record.occupation)} 일하며 살아온 과정을 유년기부터 말년기까지 시간순으로 보여줍니다.`,
-    chapterPreviews: [
-      { stage: "유년기", title: `${record.location}의 풍경을 처음 기억한 날` },
-      { stage: "청년기", title: "처음 자신의 일을 선택하게 된 계기" },
-      { stage: "중년기", title: "삶의 방향을 바꾼 선택과 대가" },
-      { stage: "말년기", title: "마지막까지 지키고 남긴 것" },
-    ],
+    description: `${record.historicalContext ? `${record.historicalContext} ` : ""}그 환경에서 ${asRole(record.occupation)} 살아온 한 사람의 선택을 시간순으로 보여줍니다.`,
+    chapterPreviews: (timeline ?? [
+      { stage: "유년기", event: `${record.location}에서 일을 배우게 된 계기` },
+      { stage: "청년기", event: "삶을 함께 바꾼 사람과의 만남" },
+      { stage: "중년기", event: "삶의 방향을 바꾼 선택과 결과" },
+      { stage: "말년기", event: "마지막까지 지키고 남긴 것" },
+    ]).map(({ stage, event }) => ({ stage, title: event })),
     readingTimeMinutes: 10,
     soulCost: 2,
     isUnlocked: false,
@@ -66,6 +68,7 @@ function createDeepDive(
   profile: SoulProfile,
   contentType: (typeof lockedContentTypes)[number]["id"],
 ): StoryBody {
+  if (profile.lifeCanon) return createCanonDeepDive(profile, contentType);
   const record = profile.mainPastLife;
   const sharedEnding = `${record.coreTheme.description} 이 마음은 정해진 운명이 아닙니다. 다만 당신이 어떤 순간을 쉽게 잊지 못하는지 보여주는 단서가 될 수 있습니다.`;
 
@@ -170,8 +173,104 @@ function createDeepDive(
   }
 }
 
+function createCanonDeepDive(
+  profile: SoulProfile,
+  contentType: (typeof lockedContentTypes)[number]["id"],
+): StoryBody {
+  const record = profile.mainPastLife;
+  const canon = profile.lifeCanon;
+  const context = `${record.period} ${record.region}, ${record.location}`;
+  const presentBridge = "이 이야기는 정해진 운명이 아니라, 지금도 반복되기 쉬운 선택의 방식을 비춰주는 장면입니다.";
+
+  switch (contentType) {
+    case "past_love":
+      return {
+        opening: `${context}. ${record.workplaceDetail}에서 당신은 ${withObject(record.meetingReason)} 계기로 ${withObject(canon.keyRelationship)} 만났습니다. 두 사람 사이에는 곧 ${withSubject(canon.sharedObject)} 남았습니다.`,
+        chapters: [
+          { title: "두 사람이 서로를 알아본 일", paragraphs: [`${record.occupationPath} 그 사람은 당신이 일을 처리하는 속도보다 누구의 사정을 먼저 살피는지를 알아봤습니다. 당신도 그 사람이 결과보다 약속을 지키는 태도에 마음을 열었습니다.`, `두 사람은 ${withObject(canon.sharedObject)} 함께 간직했습니다. 그것은 사랑의 증표이기 전에 서로에게 숨기지 않기로 한 첫 약속이었습니다.`] },
+          { title: "숨긴 진실이 드러난 날", paragraphs: [`두 사람 사이를 흔든 비밀은 ${asIdentity(canon.secret)}. ${withSubject(record.pressureSource)} 당신에게 침묵하면 지금의 생활을 지켜주겠다고 제안했습니다.`, `${withSubject(canon.turningPoint)} 찾아오자 그 사람은 사실보다 자신을 믿어 달라고 했습니다. 하지만 당신은 사랑한다는 이유로 진실을 감추면 두 사람의 약속도 함께 무너진다는 사실을 알고 있었습니다.`] },
+          { title: "사랑과 함께 지킨 선택", paragraphs: [`${canon.decisiveAction} ${withSubject(canon.keyRelationship)} 그 선택의 결과를 함께 감당할지 스스로 결정했고, 두 사람은 처음으로 각자의 두려움을 말했습니다.`, `${canon.consequence} ${withSubject(canon.sharedObject)} 이루지 못한 사랑의 흔적이 아니라 서로의 선택권을 끝까지 지켜준 기억으로 남았습니다.`] },
+        ],
+        presentMeaning: `${presentBridge} 관계를 지키기 위해 자기 요구를 숨기기보다, 두려움과 원하는 것을 같은 문장 안에서 말할 때 당신다운 사랑이 오래갑니다.`, readingTimeMinutes: 4,
+      };
+    case "last_day":
+      return {
+        opening: `${context}. 생의 마지막 중요한 날, 당신은 ${withObject(canon.sharedObject)} 꺼내 ${withObject(canon.keyRelationship)} 불러 달라고 했습니다. 남은 시간 안에 ${withObject(canon.secret)} 직접 설명해야 했습니다.`,
+        chapters: [
+          { title: "마지막으로 돌아온 사람", paragraphs: [`그 사람은 용서하기 위해 온 것이 아니었습니다. ${canon.turningPoint}에 왜 그런 선택을 했는지 듣기 위해 왔습니다. 당신은 변명 대신 당시 가장 두려웠던 것이 ${canon.centralFear}이었다고 말했습니다.`, `${record.historicalContext} 그 현실이 선택을 어렵게 했지만, 다른 사람에게 남긴 상처까지 없던 일로 만들 수는 없었습니다.`] },
+          { title: "숨겨둔 사실과 물건", paragraphs: [`당신은 ${withObject(canon.sharedObject)} 건네며 ${withObject(canon.secret)} 차례로 설명했습니다. 무엇을 지키려 했고 결국 누가 어떤 몫을 잃었는지도 빠뜨리지 않았습니다.`, `${canon.decisiveAction} 그 선택이 너무 늦었더라도 진실을 결정할 권리를 원래 주인에게 돌려주는 일은 남아 있었습니다.`] },
+          { title: "용서 대신 남긴 것", paragraphs: [`그 사람은 곧바로 용서하지 않았습니다. 다만 이제 자신의 기억을 의심하지 않아도 된다고 말하며 당신 곁에 잠시 머물렀습니다.`, `${canon.finalDay} ${canon.legacy}`] },
+        ],
+        presentMeaning: `${presentBridge} 모든 일을 정리한 뒤에야 마음을 말하려 하지 말고, 아직 바꿀 시간이 있을 때 잘못과 필요를 먼저 꺼내는 것이 관계를 지키는 선택이 될 수 있습니다.`, readingTimeMinutes: 4,
+      };
+    case "wealth_status":
+      return {
+        opening: `${context}. ${record.historicalContext} ${asPastRole(record.socialClass)} 당신에게 돈은 사치보다 원하지 않는 요구를 거절할 수 있는 선택권이었습니다.`,
+        chapters: [
+          { title: "당신이 실제로 가진 것", paragraphs: [`${record.occupationPath} 수입은 크지 않았지만 ${withAnd(record.signatureObject)} 자신의 판단을 맡길 만큼의 신뢰를 얻었습니다.`, `당신이 원한 것은 부자가 되는 일보다 ${canon.centralDesire}이었습니다. 그래서 돈을 모을 때에도 누구와 어떤 약속을 지킬지를 함께 계산했습니다.`] },
+          { title: "가장 비싼 제안", paragraphs: [`${withSubject(record.pressureSource)} 침묵의 대가로 여러 해의 수입에 해당하는 보상을 제시했습니다. 받아들이면 생활은 편해지지만 ${withSubject(canon.secret)} 영영 묻힐 상황이었습니다.`, `${canon.turningPoint}, 당신은 손익이 아니라 그 뒤에도 마주칠 사람들의 얼굴을 떠올렸습니다.`] },
+          { title: "장부 밖에 남은 재산", paragraphs: [`${canon.decisiveAction} ${canon.consequence}`, `${canon.legacy} 당신에게 남은 가장 큰 재산은 큰 숫자가 아니라 다시 약속을 맡길 수 있다는 사람들의 신뢰였습니다.`] },
+        ],
+        presentMeaning: `${presentBridge} 액수만 정하기보다 그 돈으로 확보하고 싶은 시간과 거절할 수 있는 선택을 함께 적을 때 재정 목표가 당신의 실제 가치와 가까워집니다.`, readingTimeMinutes: 4,
+      };
+    case "decisive_choice":
+      return {
+        opening: `${context}. ${withSubject(canon.turningPoint)} 당신의 남은 삶을 갈랐습니다. 지키고 싶었던 마음은 다음 한 가지였습니다. ${canon.centralDesire}. 반면 가장 두려웠던 일은 ${asIdentity(canon.centralFear)}.`,
+        chapters: [
+          { title: "거절하기 어려운 요구", paragraphs: [`${withSubject(record.pressureSource)} 따르기만 하면 지금의 자리와 생활을 보장하겠다고 약속했습니다. ${asPastRole(record.socialClass)} 당신에게 그 제안은 가볍지 않았습니다.`, `하지만 ${canon.sharedObject}에는 ${withSubject(canon.secret)} 남아 있었습니다. 모른 척하는 순간 다른 사람의 삶까지 바뀐다는 사실이 분명했습니다.`] },
+          { title: "당신이 직접 고른 행동", paragraphs: [`${canon.decisiveAction} 큰 선언보다 누가 무엇을 잃게 되는지 차례로 설명하고, 자신이 감당할 몫을 먼저 밝혔습니다.`, `${withSubject(canon.keyRelationship)} 당신의 결정을 대신하지 않았습니다. 다만 혼자 결과를 감당하지 않도록 곁에 남았습니다.`] },
+          { title: "선택 뒤의 실제 삶", paragraphs: [`${canon.consequence} 삶은 바로 편해지지 않았지만 누구와 어떤 기준으로 일할지는 스스로 정할 수 있게 됐습니다.`, `${canon.legacy} 그날의 선택은 승리가 아니라 흔들린 뒤에도 자기 기준으로 다시 시작할 수 있다는 기억이 되었습니다.`] },
+        ],
+        presentMeaning: `${presentBridge} 중요한 갈림길에서 무엇을 얻을지만큼 무엇을 잃어도 자신으로 남을 수 있는지를 살펴보면 후회가 적은 선택에 가까워집니다.`, readingTimeMinutes: 4,
+      };
+    case "karma_trace":
+      return {
+        opening: `${context}. 당신은 ${record.workplaceDetail}에서 남들보다 먼저 문제를 알아차렸지만, ${canon.centralFear} 때문에 혼자 감당하기 시작했습니다.`,
+        chapters: [
+          { title: "필요한 사람이 되고 싶었던 마음", paragraphs: [`${record.occupationPath} 부탁받기 전에 움직이는 습관은 처음에는 신뢰를 만들었습니다. 그러나 주변 사람들은 당신이 늘 괜찮을 것이라고 믿게 되었습니다.`, `${withSubject(canon.keyRelationship)} 도움을 나누자고 했지만 당신은 약한 모습을 보이면 관계까지 잃을까 봐 거절했습니다.`] },
+          { title: "침묵이 만든 오해", paragraphs: [`${canon.secret}을 혼자 품는 동안 알아주기를 바라는 마음이 쌓였습니다. 아무도 눈치채지 못하자 당신은 갑자기 모든 관계에서 멀어지고 싶어졌습니다.`, `${canon.turningPoint}, 말하지 않은 배려는 상대에게 참여할 기회를 주지 않았다는 사실이 드러났습니다.`] },
+          { title: "반복을 멈춘 한 문장", paragraphs: [`${canon.decisiveAction} 처음으로 어렵다고 말하고 역할을 나누자, ${canon.keyRelationship}도 자신의 오해와 두려움을 설명했습니다.`, `${canon.consequence} ${canon.legacy}`] },
+        ],
+        presentMeaning: `${presentBridge} '왜 몰라주지?'라는 생각이 들 때 아직 말하지 않은 요구가 있는지 살펴보고, 지치기 전에 작은 도움부터 구하는 것이 반복을 바꾸는 시작이 됩니다.`, readingTimeMinutes: 4,
+      };
+    case "present_influence":
+      return {
+        opening: `${context}. 당신의 하루는 ${record.workplaceDetail}의 리듬에 맞춰 움직였습니다. ${withObject(canon.sharedObject)} 다루며 익힌 판단 방식은 사람과 약속을 보는 기준에도 남았습니다.`,
+        chapters: [
+          { title: "몸이 먼저 기억한 기준", paragraphs: [`${record.occupationPath} 눈에 띄는 결과보다 반복해도 무너지지 않는 방식을 중요하게 여겼습니다.`, `${withSubject(record.signatureObject)} 낡아서가 아니라 한 번의 선택과 책임이 남아 있었기 때문에 버리지 못한 물건이었습니다.`] },
+          { title: "사람을 믿는 방식", paragraphs: [`${withObject(canon.keyRelationship)} 믿게 된 이유도 화려한 말이 아니라 ${record.meetingReason}에서 보인 일관된 행동이었습니다.`, `반대로 ${record.pressureSource}처럼 말과 행동이 다른 사람에게는 작은 어긋남도 오래 기억했습니다.`] },
+          { title: "지금까지 이어진 습관", paragraphs: [`${canon.turningPoint}. 그날 당신은 사실을 나누고 역할을 맡기는 일이 더 오래가는 결과를 만든다는 것을 배웠습니다.`, `${canon.legacy} 지금도 마지막 세부를 책임지는 힘과 모든 것을 혼자 고치려는 부담이 함께 나타날 수 있습니다.`] },
+        ],
+        presentMeaning: `${presentBridge} 꾸준함과 세부를 보는 힘은 강점이지만, 상대가 고칠 의지가 없는 일까지 자신의 책임으로 받아들이지 않는 경계가 필요합니다.`, readingTimeMinutes: 4,
+      };
+    case "family_bonds":
+      return {
+        opening: `${context}. 어린 시절 당신은 ${record.occupationPath} 가족의 사랑을 말보다 책임과 생계로 배웠고, 그 방식은 훗날 가까운 아이를 지키려 할 때 다시 나타났습니다.`,
+        chapters: [
+          { title: "부모에게 배운 보호", paragraphs: [`가족은 당신을 아꼈지만 위험을 막는다는 이유로 선택을 대신하곤 했습니다. 당신은 인정받기 위해 도움을 청하지 않는 아이가 되었습니다.`, `${withSubject(canon.sharedObject)} 처음으로 가족의 뜻과 다른 길을 택했을 때 가지고 나온 물건이었습니다.`] },
+          { title: "사랑이라는 이름의 반복", paragraphs: [`세월이 흘러 당신은 어린 가족 또는 제자를 돌보게 됐습니다. 그 아이가 위험한 선택을 하자 이유를 듣기 전에 막아섰고, 자신이 받았던 보호를 그대로 반복했습니다.`, `${canon.turningPoint}, 아이는 보호받는 대신 믿어달라고 말했습니다. 그 문장에서 오래전 자신의 마음을 알아봤습니다.`] },
+          { title: "가족의 규칙을 바꾼 날", paragraphs: [`${canon.decisiveAction} 두려움이 아이의 부족함 때문이 아니라 또 가족을 잃을까 무서웠기 때문이라고 설명했습니다.`, `${canon.consequence} ${canon.legacy}`] },
+        ],
+        presentMeaning: `${presentBridge} 가족을 걱정할 때 대신 결정하기보다 자신의 두려움을 먼저 말하고 선택을 돌려주는 방식이 오래된 보호의 패턴을 바꿀 수 있습니다.`, readingTimeMinutes: 4,
+      };
+  }
+}
+
 function createLockedPreview(profile: SoulProfile, contentType: LockedContentType): string {
   const record = profile.mainPastLife;
+  const canon = profile.lifeCanon;
+  if (canon) {
+    const previews: Record<LockedContentType, string> = {
+      past_love: `${record.meetingReason}에서 시작된 ${canon.keyRelationship}과의 관계. ${canon.sharedObject}에 숨은 비밀이 두 사람의 선택을 바꿉니다.`,
+      last_day: `${canon.finalDay} 용서보다 먼저 돌려줘야 했던 진실이 남아 있습니다.`,
+      wealth_status: `${record.socialClass}의 삶에서 ${withSubject(record.pressureSource)} 제안한 거래와 실제로 지킨 재산을 보여줍니다.`,
+      decisive_choice: `${canon.turningPoint}, 당신이 직접 고른 행동과 그 뒤 실제로 잃고 얻은 것을 보여줍니다.`,
+      karma_trace: `${canon.centralFear} 때문에 혼자 감당하던 방식이 어떤 관계를 멀어지게 했는지 살펴봅니다.`,
+      present_influence: `${record.workplaceDetail}에서 익힌 기준이 지금의 취향과 신뢰 방식에 남아 있습니다.`,
+      family_bonds: `부모에게 배운 보호가 가까운 아이에게 반복된 순간과 그 반복을 멈춘 선택을 보여줍니다.`,
+    };
+    return previews[contentType];
+  }
   const previews: Record<LockedContentType, string> = {
     past_love: `당신은 ${record.location}에서 한 사람을 오래 기다렸습니다. 두 사람 사이에 남은 물건 하나가 끝내 하지 못한 말을 대신하고 있습니다.`,
     last_day: `마지막 아침, 당신은 떠날 준비보다 남겨질 사람들의 하루를 먼저 정리했습니다. 마지막 편지에 적힌 한 문장이 지금의 책임감과 이어집니다.`,

@@ -29,6 +29,10 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("전생에서의 성별: 여성");
     expect(prompt.user).toContain(profile.mainPastLife.coreTheme.label);
     expect(prompt.user).toContain(profile.mainPastLife.coreTheme.description);
+    expect(prompt.user).toContain("[한 생애의 정본]");
+    expect(prompt.user).toContain(profile.lifeCanon.turningPoint);
+    expect(prompt.user).toContain(profile.lifeCanon.consequence);
+    expect(prompt.user).toContain("정본과 모순되는 새 가족관계나 생애 사건을 만들지 말 것");
     expect(prompt.user).toContain("1,200~1,800자");
     expect(prompt.system).toContain("누가 무엇을 했고 왜 그런 선택을 했는지");
     expect(prompt.system).toContain("비유만으로 뜻을 대신하지 않는다");
@@ -45,6 +49,8 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("스스로 고른 행동");
     expect(prompt.user).toContain("선택 뒤에 실제로 달라진 것");
     expect(prompt.user).not.toContain(profile.soulHash);
+    expect(prompt.qualityContext.requiredAnchors).toContain(profile.lifeCanon.sharedObject);
+    expect(prompt.qualityContext.requiredAnchors).toContain(profile.lifeCanon.turningPoint);
   });
 
   it("builds a family-bonds story around parents, children, and present-day patterns", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createSoulProfile } from "@/lib/soul/createSoulProfile";
-import { historicalSettings, pastLifeWorlds } from "@/config/soulEnginePools";
+import { pastLifeScenarios } from "@/config/pastLifeScenarios";
 import type { SoulInput } from "@/types/soul";
 
 const baseInput: SoulInput = {
@@ -66,16 +66,41 @@ describe("createSoulProfile", () => {
     ]);
   });
 
-  it("selects the role, location, and social position from the chosen world's compatible pool", () => {
+  it("selects a curated historical scenario that belongs to the resulting archetype", () => {
     const profile = createSoulProfile(baseInput);
-    const world = pastLifeWorlds.find((candidate) => (
-      candidate.period === profile.mainPastLife.period && candidate.region === profile.mainPastLife.region
-    ));
+    const scenario = pastLifeScenarios.find((candidate) => candidate.id === profile.mainPastLife.scenarioId);
 
-    expect(world).toBeDefined();
-    const setting = historicalSettings[world!.settingId];
-    expect(setting.occupations).toContain(profile.mainPastLife.occupation);
-    expect(setting.locations).toContain(profile.mainPastLife.location);
-    expect(setting.socialClasses).toContain(profile.mainPastLife.socialClass);
+    expect(scenario).toBeDefined();
+    expect(scenario?.archetypeId).toBe(profile.archetypeId);
+    expect(profile.mainPastLife).toMatchObject({
+      occupation: scenario?.occupation,
+      location: scenario?.location,
+      historicalContext: scenario?.historicalContext,
+    });
+    expect(profile.lifeCanon.scenarioId).toBe(scenario?.id);
+    expect(profile.lifeCanon.timeline).toHaveLength(4);
+    expect(profile.readingRationale).toHaveLength(3);
+  });
+
+  it("lets strong answer patterns dominate the lightweight birth signal", () => {
+    const recordFocused = createSoulProfile({
+      ...baseInput,
+      birthDate: "1997-02-27",
+      answers: {
+        inner_response: "b", decision_pattern: "a", emotional_trace: "a", conflict_style: "a",
+        hidden_desire: "b", repeated_theme: "f", decisive_choice: "b",
+      },
+    });
+    const pioneering = createSoulProfile({
+      ...baseInput,
+      birthDate: "1988-11-03",
+      answers: {
+        inner_response: "a", decision_pattern: "d", emotional_trace: "d", conflict_style: "d",
+        hidden_desire: "a", repeated_theme: "e", decisive_choice: "e",
+      },
+    });
+
+    expect(["chronicler", "scholar"]).toContain(recordFocused.archetypeId);
+    expect(["pioneer", "wayfinder"]).toContain(pioneering.archetypeId);
   });
 });

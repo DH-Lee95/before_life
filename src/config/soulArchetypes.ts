@@ -10,7 +10,10 @@ export type SoulArchetype = {
 };
 
 type Pools = Pick<SoulArchetype, "occupations" | "locations" | "hiddenNatures">;
-const themes = (...labels: string[]): NarrativeTheme[] => labels.map((label) => ({ label, description: `${label}을 품고 살아갔습니다.` }));
+const themes = (...labels: string[]): NarrativeTheme[] => labels.map((label) => ({
+  label,
+  description: `당신이 오래 품었던 마음은 다음과 같습니다. ${label}.`,
+}));
 
 const pioneer: Pools = {
   occupations: ["항해 지도 제작자", "교역로를 개척한 상인", "독립 공방의 운영자", "산길 안내인", "수로 측량사", "마차 정비사", "새 시장의 중개인", "개척지 우편 배달부"],

@@ -23,7 +23,7 @@ const profile = createSoulProfile({
 const prompt = createStoryGenerationPrompt(profile, "past_love");
 const validStory = {
   title: "등불 아래 남은 약속",
-  opening: "해 질 무렵 항구의 돌바닥이 붉게 식어 갈 때, 서연은 장부 사이에 접힌 편지를 다시 펼쳤습니다.",
+  opening: `해 질 무렵 항구의 돌바닥이 붉게 식어 갈 때, 서연은 ${profile.lifeCanon.sharedObject}을 다시 펼쳤습니다.`,
   chapters: [
     { title: "첫 장", paragraphs: ["바람이 가게의 문을 밀었습니다.", "두 사람은 같은 곳을 바라보았습니다."] },
     { title: "둘째 장", paragraphs: ["떠날 날이 가까워졌습니다.", "서연은 남는 쪽을 선택했습니다."] },

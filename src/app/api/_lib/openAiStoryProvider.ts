@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { DEFAULT_STORY_MODEL, OPENAI_RESPONSES_URL } from "@/config/openAi";
 import type { StoryGenerationPrompt, WholeLifeGenerationPrompt } from "@/lib/content/createStoryGenerationPrompt";
-import { createStoryRepairPrompt, validateGeneratedStory, validateGeneratedWholeLife } from "@/lib/content/validateGeneratedStory";
+import { createStoryRepairPrompt, validateGeneratedStory, validateGeneratedWholeLife, validateStoryContinuity } from "@/lib/content/validateGeneratedStory";
 import type { SoulContentType, StoryNarrative, WholeLifeNarrative } from "@/types/soul";
 
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
@@ -114,9 +114,14 @@ async function requestStructuredStory({
 }
 
 function validateForPrompt(prompt: GenerationPrompt, value: unknown) {
-  return prompt.outputFormat.name === "past_life_whole_life"
+  const structural = prompt.outputFormat.name === "past_life_whole_life"
     ? validateGeneratedWholeLife(value)
     : validateGeneratedStory(value);
+  if (!structural.success) return structural;
+  const continuityIssues = validateStoryContinuity(structural.data, prompt.qualityContext);
+  return continuityIssues.length > 0
+    ? { success: false as const, issues: continuityIssues }
+    : structural;
 }
 
 function readOutputText(payload: unknown): string | null {
