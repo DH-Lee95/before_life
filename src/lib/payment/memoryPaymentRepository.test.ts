@@ -49,6 +49,25 @@ describe("memory payment repository", () => {
     expect(await repository.getIntentByOrderId(intent.orderId)).toEqual(intent);
   });
 
+  it("attaches one PayApp request to a pending intent idempotently", async () => {
+    const repository = createMemoryPaymentRepository();
+    const intent = createPaymentIntent({
+      anonymousSessionId: "anon_owner", soulProfileId: "sp_test", packId: "soul_1",
+      id: "intent-id", randomId: "random-id", now: new Date(),
+    });
+    await repository.createIntent(intent);
+
+    const input = {
+      intentId: intent.id,
+      providerPaymentKey: "2000",
+      providerCheckoutUrl: "https://payapp.kr/pay/2000",
+    };
+    const attached = { id: intent.id, providerPaymentKey: input.providerPaymentKey, providerCheckoutUrl: input.providerCheckoutUrl };
+    await expect(repository.attachProviderRequest(input)).resolves.toMatchObject(attached);
+    await expect(repository.attachProviderRequest(input)).resolves.toMatchObject(attached);
+    await expect(repository.getIntentByOrderId(intent.orderId)).resolves.toMatchObject(attached);
+  });
+
   it("reverses an approved purchase idempotently after a full refund", async () => {
     const repository = createMemoryPaymentRepository();
     const intent = createPaymentIntent({

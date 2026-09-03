@@ -12,7 +12,7 @@ describe("Supabase payment repository", () => {
         return json([{
           id: "intent-id", anonymous_session_id: "session-uuid", soul_profile_id: "sp_test",
           order_id: "soul_random-id", pack_id: "soul_3", amount_krw: 2490, souls: 3,
-          status: "pending", provider_payment_key: null,
+          status: "pending", provider_payment_key: null, provider_checkout_url: null,
           created_at: "2026-08-28T09:00:00.000Z", approved_at: null, expires_at: "2026-08-28T09:30:00.000Z",
         }]);
       }
@@ -35,8 +35,8 @@ describe("Supabase payment repository", () => {
       if (url.includes("payment_intents") && url.includes("order_id=eq.soul_order")) {
         return json([{
           id: "intent-id", anonymous_session_id: "session-uuid", soul_profile_id: "sp_test",
-          order_id: "soul_order", pack_id: "soul_1", amount_krw: 990, souls: 1,
-          status: "pending", provider_payment_key: null,
+          order_id: "soul_order", pack_id: "soul_1", amount_krw: 1000, souls: 1,
+          status: "pending", provider_payment_key: null, provider_checkout_url: null,
           created_at: "2026-08-28T09:00:00.000Z", approved_at: null, expires_at: "2026-08-28T09:30:00.000Z",
         }]);
       }
@@ -52,6 +52,34 @@ describe("Supabase payment repository", () => {
     });
   });
 
+  it("stores the PayApp transaction and checkout URL before redirecting", async () => {
+    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("payment_intents") && init?.method === "PATCH") return json([{
+        id: "intent-id", anonymous_session_id: "session-uuid", soul_profile_id: "sp_test",
+        order_id: "soul_order", pack_id: "soul_1", amount_krw: 1000, souls: 1,
+        status: "pending", provider_payment_key: "2000",
+        provider_checkout_url: "https://payapp.kr/pay/2000",
+        created_at: "2026-08-28T09:00:00.000Z", approved_at: null,
+        expires_at: "2026-08-28T09:30:00.000Z",
+      }]);
+      if (url.includes("anonymous_sessions") && url.includes("id=eq.session-uuid")) {
+        return json([{ session_id: "anon_owner" }]);
+      }
+      return json([], 404);
+    });
+    const repository = createSupabasePaymentRepository({ url: "https://db.example", serviceRoleKey: "secret", fetchImpl });
+
+    await expect(repository.attachProviderRequest({
+      intentId: "intent-id", providerPaymentKey: "2000",
+      providerCheckoutUrl: "https://payapp.kr/pay/2000",
+    })).resolves.toMatchObject({ providerPaymentKey: "2000", providerCheckoutUrl: "https://payapp.kr/pay/2000" });
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("provider_payment_key=is.null"),
+      expect.objectContaining({ method: "PATCH" }),
+    );
+  });
+
   it("reconciles a full refund through the atomic database RPC", async () => {
     const fetchImpl = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -60,7 +88,7 @@ describe("Supabase payment repository", () => {
         return json([{
           id: "intent-id", anonymous_session_id: "session-uuid", soul_profile_id: "sp_test",
           order_id: "soul_order", pack_id: "soul_3", amount_krw: 2490, souls: 3,
-          status: "canceled", provider_payment_key: "payment-key",
+          status: "canceled", provider_payment_key: "payment-key", provider_checkout_url: null,
           created_at: "2026-08-28T09:00:00.000Z", approved_at: "2026-08-28T09:01:00.000Z",
           expires_at: "2026-08-28T09:30:00.000Z",
         }]);

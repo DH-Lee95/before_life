@@ -1,21 +1,37 @@
 type PaymentEnvironment = {
-  NEXT_PUBLIC_TOSS_CLIENT_KEY?: string;
-  TOSS_SECRET_KEY?: string;
+  PAYAPP_USER_ID?: string;
+  PAYAPP_LINK_KEY?: string;
+  PAYAPP_LINK_VALUE?: string;
+  PAYAPP_MODE?: string;
+  PAYAPP_OPEN_PAY_TYPES?: string;
+  NEXT_PUBLIC_SITE_URL?: string;
+  BUSINESS_NAME?: string;
 };
 
 export function readPaymentEnvironment(environment: PaymentEnvironment) {
-  const clientKey = environment.NEXT_PUBLIC_TOSS_CLIENT_KEY?.trim();
-  const secretKey = environment.TOSS_SECRET_KEY?.trim();
-  if (!clientKey || !secretKey) throw new Error("payment is not configured");
-  const clientMode = paymentKeyMode(clientKey);
-  const secretMode = paymentKeyMode(secretKey);
-  if (!clientMode || !secretMode) throw new Error("invalid Toss payment keys");
-  if (clientMode !== secretMode) throw new Error("Toss payment keys must use the same mode");
-  return { clientKey, secretKey, mode: clientMode };
-}
-
-function paymentKeyMode(key: string): "test" | "live" | null {
-  if (key.startsWith("test_")) return "test";
-  if (key.startsWith("live_")) return "live";
-  return null;
+  const userId = environment.PAYAPP_USER_ID?.trim();
+  const linkKey = environment.PAYAPP_LINK_KEY?.trim();
+  const linkValue = environment.PAYAPP_LINK_VALUE?.trim();
+  const mode = environment.PAYAPP_MODE?.trim();
+  const rawSiteUrl = environment.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!userId || !linkKey || !linkValue || !rawSiteUrl || (mode !== "test" && mode !== "live")) {
+    throw new Error("payment is not configured");
+  }
+  const siteUrl = new URL(rawSiteUrl);
+  if (mode === "live" && siteUrl.protocol !== "https:") {
+    throw new Error("live payments require an HTTPS site URL");
+  }
+  if (siteUrl.protocol !== "https:" && siteUrl.protocol !== "http:") {
+    throw new Error("invalid payment site URL");
+  }
+  return {
+    userId,
+    linkKey,
+    linkValue,
+    mode: mode as "test" | "live",
+    siteUrl: siteUrl.toString().replace(/\/$/, ""),
+    shopName: environment.BUSINESS_NAME?.trim() || "전생서랍",
+    openPayTypes: environment.PAYAPP_OPEN_PAY_TYPES?.trim()
+      || "card,kakaopay,naverpay,applepay,payco,tosspay",
+  };
 }

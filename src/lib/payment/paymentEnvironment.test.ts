@@ -3,25 +3,24 @@ import { describe, expect, it } from "vitest";
 import { readPaymentEnvironment } from "./paymentEnvironment";
 
 describe("payment environment", () => {
-  it("accepts paired Toss test or live keys and identifies the mode", () => {
+  it("accepts complete PayApp settings and normalizes the site URL", () => {
     expect(readPaymentEnvironment({
-      NEXT_PUBLIC_TOSS_CLIENT_KEY: "test_gck_client",
-      TOSS_SECRET_KEY: "test_gsk_secret",
-    })).toEqual({ clientKey: "test_gck_client", secretKey: "test_gsk_secret", mode: "test" });
-
-    expect(readPaymentEnvironment({
-      NEXT_PUBLIC_TOSS_CLIENT_KEY: "live_gck_client",
-      TOSS_SECRET_KEY: "live_gsk_secret",
-    })).toEqual({ clientKey: "live_gck_client", secretKey: "live_gsk_secret", mode: "live" });
+      PAYAPP_USER_ID: " seller ", PAYAPP_LINK_KEY: " key ", PAYAPP_LINK_VALUE: " value ",
+      PAYAPP_MODE: "test", NEXT_PUBLIC_SITE_URL: "http://localhost:3000/", BUSINESS_NAME: "전생서랍",
+    })).toEqual({
+      userId: "seller", linkKey: "key", linkValue: "value", mode: "test",
+      siteUrl: "http://localhost:3000", shopName: "전생서랍",
+      openPayTypes: "card,kakaopay,naverpay,applepay,payco,tosspay",
+    });
   });
 
-  it("rejects missing or mixed payment key modes", () => {
+  it("rejects missing settings and non-HTTPS live URLs", () => {
     expect(() => readPaymentEnvironment({
-      NEXT_PUBLIC_TOSS_CLIENT_KEY: "live_gck_client",
-      TOSS_SECRET_KEY: "test_gsk_secret",
-    })).toThrow("same mode");
-    expect(() => readPaymentEnvironment({
-      NEXT_PUBLIC_TOSS_CLIENT_KEY: "live_gck_client",
+      PAYAPP_USER_ID: "seller", PAYAPP_LINK_KEY: "key", PAYAPP_MODE: "test",
     })).toThrow("payment is not configured");
+    expect(() => readPaymentEnvironment({
+      PAYAPP_USER_ID: "seller", PAYAPP_LINK_KEY: "key", PAYAPP_LINK_VALUE: "value",
+      PAYAPP_MODE: "live", NEXT_PUBLIC_SITE_URL: "http://before-life.test",
+    })).toThrow("HTTPS");
   });
 });

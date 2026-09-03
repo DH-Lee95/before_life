@@ -10,6 +10,7 @@ export type PaymentIntent = {
   souls: number;
   status: PaymentIntentStatus;
   providerPaymentKey?: string;
+  providerCheckoutUrl?: string;
   createdAt: string;
   approvedAt?: string;
   expiresAt: string;

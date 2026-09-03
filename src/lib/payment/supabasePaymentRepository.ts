@@ -18,6 +18,7 @@ type PaymentIntentRow = {
   souls: number;
   status: PaymentIntentStatus;
   provider_payment_key: string | null;
+  provider_checkout_url: string | null;
   created_at: string;
   approved_at: string | null;
   expires_at: string;
@@ -96,6 +97,31 @@ export function createSupabasePaymentRepository({
       const anonymousSessionId = await getSessionIdByRowId(row.anonymous_session_id);
       return toIntent(row, anonymousSessionId);
     },
+    async attachProviderRequest({ intentId, providerPaymentKey, providerCheckoutUrl }) {
+      const params = new URLSearchParams({
+        id: `eq.${intentId}`,
+        status: "eq.pending",
+        provider_payment_key: "is.null",
+      });
+      const rows = await request<PaymentIntentRow[]>(`payment_intents?${params}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({
+          provider: "payapp",
+          provider_payment_key: providerPaymentKey,
+          provider_checkout_url: providerCheckoutUrl,
+        }),
+      });
+      const row = rows[0] ?? await getIntentRowById(intentId);
+      if (!row) throw new Error("payment intent not found");
+      if (
+        row.status !== "pending"
+        || row.provider_payment_key !== providerPaymentKey
+        || row.provider_checkout_url !== providerCheckoutUrl
+      ) throw new Error("payment provider request mismatch");
+      const anonymousSessionId = await getSessionIdByRowId(row.anonymous_session_id);
+      return toIntent(row, anonymousSessionId);
+    },
     async approveIntent({ intentId, providerPaymentKey, rawPayload }) {
       const result = await request<{ balance: number }>("rpc/approve_soul_purchase", {
         method: "POST",
@@ -138,6 +164,7 @@ function toRow(intent: PaymentIntent, sessionRowId: string): PaymentIntentRow {
     souls: intent.souls,
     status: intent.status,
     provider_payment_key: intent.providerPaymentKey ?? null,
+    provider_checkout_url: intent.providerCheckoutUrl ?? null,
     created_at: intent.createdAt,
     approved_at: intent.approvedAt ?? null,
     expires_at: intent.expiresAt,
@@ -155,6 +182,7 @@ function toIntent(row: PaymentIntentRow, anonymousSessionId: string): PaymentInt
     souls: row.souls,
     status: row.status,
     ...(row.provider_payment_key ? { providerPaymentKey: row.provider_payment_key } : {}),
+    ...(row.provider_checkout_url ? { providerCheckoutUrl: row.provider_checkout_url } : {}),
     createdAt: row.created_at,
     ...(row.approved_at ? { approvedAt: row.approved_at } : {}),
     expiresAt: row.expires_at,

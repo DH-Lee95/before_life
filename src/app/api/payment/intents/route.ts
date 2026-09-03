@@ -15,8 +15,13 @@ import { hashResultToken } from "@/lib/session/resultToken";
 export async function POST(request: Request) {
   try {
     const paymentEnvironment = readPaymentEnvironment({
-      NEXT_PUBLIC_TOSS_CLIENT_KEY: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
-      TOSS_SECRET_KEY: process.env.TOSS_SECRET_KEY,
+      PAYAPP_USER_ID: process.env.PAYAPP_USER_ID,
+      PAYAPP_LINK_KEY: process.env.PAYAPP_LINK_KEY,
+      PAYAPP_LINK_VALUE: process.env.PAYAPP_LINK_VALUE,
+      PAYAPP_MODE: process.env.PAYAPP_MODE,
+      PAYAPP_OPEN_PAY_TYPES: process.env.PAYAPP_OPEN_PAY_TYPES,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+      BUSINESS_NAME: process.env.BUSINESS_NAME,
     });
     assertLiveCommerceReady(paymentEnvironment.mode);
     const anonymousSessionId = await getAnonymousSessionId();
@@ -80,6 +85,7 @@ async function getAnonymousSessionId() {
 
 function toPublicIntent(intent: {
   soulProfileId: string; orderId: string; packId: string; amountKrw: number; souls: number; status: string;
+  providerCheckoutUrl?: string;
 }) {
   return {
     profileId: intent.soulProfileId,
@@ -88,5 +94,6 @@ function toPublicIntent(intent: {
     amountKrw: intent.amountKrw,
     souls: intent.souls,
     status: intent.status,
+    ...(intent.providerCheckoutUrl ? { checkoutUrl: intent.providerCheckoutUrl } : {}),
   };
 }

@@ -1,75 +1,73 @@
-import { NextResponse } from "next/server";
-
 import { readPaymentEnvironment } from "@/lib/payment/paymentEnvironment";
+import { verifyPayAppFeedback } from "@/lib/payment/payAppPaymentProvider";
 import { getPaymentRepository } from "@/lib/payment/paymentProvider";
-import { getTossPaymentByOrderId } from "@/lib/payment/tossPaymentProvider";
 
 export const runtime = "nodejs";
 
-type TossPaymentEvent = {
-  eventType?: unknown;
-  data?: { orderId?: unknown; status?: unknown };
-};
+const SUCCESS = new Response("SUCCESS", { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 
 export async function POST(request: Request) {
   try {
-    const event = await request.json() as TossPaymentEvent;
-    if (event.eventType !== "PAYMENT_STATUS_CHANGED") return NextResponse.json({ ok: true, ignored: true });
-    const orderId = typeof event.data?.orderId === "string" ? event.data.orderId : "";
-    const status = typeof event.data?.status === "string" ? event.data.status : "";
-    if (!/^[A-Za-z0-9_-]{6,64}$/.test(orderId)) {
-      return NextResponse.json({ message: "invalid payment webhook" }, { status: 400 });
-    }
-    if (status === "PARTIAL_CANCELED") {
-      console.error("Partial Toss cancellation requires manual soul reconciliation", { orderId });
-      return NextResponse.json({ message: "partial cancellation requires manual reconciliation" }, { status: 409 });
-    }
-    if (status !== "DONE" && status !== "CANCELED") return NextResponse.json({ ok: true, ignored: true });
+    const feedback = new URLSearchParams(await request.text());
+    const orderId = feedback.get("var1")?.trim() ?? "";
+    if (!/^[A-Za-z0-9_-]{6,64}$/.test(orderId)) return fail(400);
 
     const repository = getPaymentRepository();
     const intent = await repository.getIntentByOrderId(orderId);
-    if (!intent) return NextResponse.json({ message: "order not found" }, { status: 404 });
-    if (status === "DONE" && intent.status === "approved") return NextResponse.json({ ok: true, repeated: true });
-    if (status === "CANCELED" && intent.status === "canceled") return NextResponse.json({ ok: true, repeated: true });
-    if (status === "DONE" && intent.status !== "pending") {
-      return NextResponse.json({ message: "payment cannot be approved" }, { status: 409 });
-    }
-    if (status === "CANCELED" && intent.status !== "approved") {
-      return NextResponse.json({ message: "payment cannot be canceled" }, { status: 409 });
-    }
-
-    const { secretKey } = readPaymentEnvironment({
-      NEXT_PUBLIC_TOSS_CLIENT_KEY: process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY,
-      TOSS_SECRET_KEY: process.env.TOSS_SECRET_KEY,
+    if (!intent) return fail(404);
+    const environment = readPaymentEnvironment({
+      PAYAPP_USER_ID: process.env.PAYAPP_USER_ID,
+      PAYAPP_LINK_KEY: process.env.PAYAPP_LINK_KEY,
+      PAYAPP_LINK_VALUE: process.env.PAYAPP_LINK_VALUE,
+      PAYAPP_MODE: process.env.PAYAPP_MODE,
+      PAYAPP_OPEN_PAY_TYPES: process.env.PAYAPP_OPEN_PAY_TYPES,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+      BUSINESS_NAME: process.env.BUSINESS_NAME,
     });
-    const payment = await getTossPaymentByOrderId({ secretKey, orderId });
-    const commonMismatch = (
-      payment.orderId !== intent.orderId
-      || payment.totalAmount !== intent.amountKrw
-      || !payment.paymentKey
-      || Boolean(intent.providerPaymentKey && intent.providerPaymentKey !== payment.paymentKey)
-    );
-    if (commonMismatch || payment.status !== status || (status === "CANCELED" && payment.balanceAmount !== 0)) {
-      return NextResponse.json({ message: "payment verification failed" }, { status: 409 });
-    }
+    const verified = verifyPayAppFeedback(feedback, {
+      userId: environment.userId,
+      linkKey: environment.linkKey,
+      linkValue: environment.linkValue,
+      orderId: intent.orderId,
+      profileId: intent.soulProfileId,
+      amountKrw: intent.amountKrw,
+    });
+    if (intent.providerPaymentKey !== verified.providerPaymentKey) return fail(400);
 
-    if (status === "CANCELED") {
+    if (verified.state === "4") {
+      if (intent.status === "approved") return SUCCESS.clone();
+      if (intent.status !== "pending") return fail(409);
+      await repository.approveIntent({
+        intentId: intent.id,
+        providerPaymentKey: verified.providerPaymentKey,
+        rawPayload: verified,
+      });
+      return SUCCESS.clone();
+    }
+    if (verified.state === "9" || verified.state === "64") {
+      if (intent.status === "canceled") return SUCCESS.clone();
+      if (intent.status !== "approved") return fail(409);
       await repository.cancelIntent({
         intentId: intent.id,
-        providerPaymentKey: payment.paymentKey,
-        rawPayload: payment,
+        providerPaymentKey: verified.providerPaymentKey,
+        rawPayload: verified,
       });
-      return NextResponse.json({ ok: true });
+      return SUCCESS.clone();
     }
-
-    await repository.approveIntent({
-      intentId: intent.id,
-      providerPaymentKey: payment.paymentKey,
-      rawPayload: payment,
-    });
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("Payment webhook reconciliation failed", error);
-    return NextResponse.json({ message: "payment webhook failed" }, { status: 500 });
+    if (verified.state === "70" || verified.state === "71") {
+      console.error("PayApp partial cancellation requires manual soul reconciliation", {
+        orderId: verified.orderId,
+        providerPaymentKey: verified.providerPaymentKey,
+        state: verified.state,
+      });
+    }
+    return SUCCESS.clone();
+  } catch (caught) {
+    console.error("PayApp feedback reconciliation failed", caught);
+    return fail(400);
   }
+}
+
+function fail(status: number) {
+  return new Response("FAIL", { status, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }

@@ -5,97 +5,70 @@ import { POST } from "./route";
 const getIntentByOrderId = vi.hoisted(() => vi.fn());
 const approveIntent = vi.hoisted(() => vi.fn());
 const cancelIntent = vi.hoisted(() => vi.fn());
-const getTossPaymentByOrderId = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/payment/paymentProvider", () => ({
   getPaymentRepository: () => ({ getIntentByOrderId, approveIntent, cancelIntent }),
 }));
-vi.mock("@/lib/payment/tossPaymentProvider", () => ({ getTossPaymentByOrderId }));
 
 describe("POST /api/payment/webhook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("NEXT_PUBLIC_TOSS_CLIENT_KEY", "live_gck_client");
-    vi.stubEnv("TOSS_SECRET_KEY", "live_gsk_secret");
+    vi.stubEnv("PAYAPP_USER_ID", "seller");
+    vi.stubEnv("PAYAPP_LINK_KEY", "link-key");
+    vi.stubEnv("PAYAPP_LINK_VALUE", "link-value");
+    vi.stubEnv("PAYAPP_MODE", "live");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://before-life.co.kr");
     getIntentByOrderId.mockResolvedValue({
-      id: "intent-id", orderId: "soul_order", amountKrw: 2490, status: "pending",
-    });
-    getTossPaymentByOrderId.mockResolvedValue({
-      paymentKey: "payment-key", orderId: "soul_order", totalAmount: 2490, status: "DONE",
+      id: "intent-id", soulProfileId: "sp_test", orderId: "soul_order", amountKrw: 2490,
+      status: "pending", providerPaymentKey: "2000",
     });
     approveIntent.mockResolvedValue({ intent: { status: "approved" }, balance: 3 });
     cancelIntent.mockResolvedValue({ intent: { status: "canceled" }, balance: 0 });
   });
 
-  it("reverses souls only after Toss verifies a full cancellation", async () => {
+  it("credits souls after a verified PayApp completion callback", async () => {
+    const response = await POST(webhook({ pay_state: "4", card_num: "do-not-store" }));
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("SUCCESS");
+    expect(approveIntent).toHaveBeenCalledWith({
+      intentId: "intent-id", providerPaymentKey: "2000",
+      rawPayload: expect.not.objectContaining({ card_num: expect.anything() }),
+    });
+  });
+
+  it("rejects a callback with an invalid verification value", async () => {
+    const response = await POST(webhook({ pay_state: "4", linkval: "wrong" }));
+    expect(response.status).toBe(400);
+    await expect(response.text()).resolves.toBe("FAIL");
+    expect(approveIntent).not.toHaveBeenCalled();
+  });
+
+  it("reverses souls after a verified full cancellation", async () => {
     getIntentByOrderId.mockResolvedValue({
-      id: "intent-id", orderId: "soul_order", amountKrw: 2490, status: "approved", providerPaymentKey: "payment-key",
+      id: "intent-id", soulProfileId: "sp_test", orderId: "soul_order", amountKrw: 2490,
+      status: "approved", providerPaymentKey: "2000",
     });
-    getTossPaymentByOrderId.mockResolvedValue({
-      paymentKey: "payment-key", orderId: "soul_order", totalAmount: 2490,
-      balanceAmount: 0, status: "CANCELED",
-    });
-
-    const response = await POST(webhook({
-      eventType: "PAYMENT_STATUS_CHANGED", data: { orderId: "soul_order", status: "CANCELED" },
-    }));
-
+    const response = await POST(webhook({ pay_state: "9" }));
     expect(response.status).toBe(200);
-    expect(cancelIntent).toHaveBeenCalledWith(expect.objectContaining({
-      intentId: "intent-id", providerPaymentKey: "payment-key",
-    }));
+    expect(cancelIntent).toHaveBeenCalledWith(expect.objectContaining({ intentId: "intent-id" }));
   });
 
-  it("does not automatically reconcile a partial cancellation", async () => {
+  it("acknowledges partial cancellations for manual reconciliation without changing souls", async () => {
     const response = await POST(webhook({
-      eventType: "PAYMENT_STATUS_CHANGED", data: { orderId: "soul_order", status: "PARTIAL_CANCELED" },
+      pay_state: "70", price: "1000", mul_no: "2001", orig_price: "2490", orig_mul_no: "2000",
     }));
-
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("SUCCESS");
     expect(cancelIntent).not.toHaveBeenCalled();
-  });
-
-  it("re-fetches a completed payment from Toss before crediting it", async () => {
-    const response = await POST(webhook({
-      eventType: "PAYMENT_STATUS_CHANGED",
-      data: { orderId: "soul_order", paymentKey: "untrusted-key", status: "DONE", totalAmount: 1 },
-    }));
-
-    expect(response.status).toBe(200);
-    expect(getTossPaymentByOrderId).toHaveBeenCalledWith(expect.objectContaining({
-      orderId: "soul_order", secretKey: "live_gsk_secret",
-    }));
-    expect(approveIntent).toHaveBeenCalledWith(expect.objectContaining({
-      intentId: "intent-id", providerPaymentKey: "payment-key",
-    }));
-  });
-
-  it("does not credit when Toss reports a mismatched amount", async () => {
-    getTossPaymentByOrderId.mockResolvedValue({
-      paymentKey: "payment-key", orderId: "soul_order", totalAmount: 1, status: "DONE",
-    });
-
-    const response = await POST(webhook({
-      eventType: "PAYMENT_STATUS_CHANGED", data: { orderId: "soul_order", status: "DONE" },
-    }));
-
-    expect(response.status).toBe(409);
-    expect(approveIntent).not.toHaveBeenCalled();
-  });
-
-  it("acknowledges unrelated or unfinished payment events without crediting", async () => {
-    const response = await POST(webhook({
-      eventType: "PAYMENT_STATUS_CHANGED", data: { orderId: "soul_order", status: "IN_PROGRESS" },
-    }));
-
-    expect(response.status).toBe(200);
-    expect(getTossPaymentByOrderId).not.toHaveBeenCalled();
-    expect(approveIntent).not.toHaveBeenCalled();
   });
 });
 
-function webhook(body: object) {
-  return new Request("https://service.example/api/payment/webhook", {
-    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+function webhook(overrides: Record<string, string>) {
+  const body = new URLSearchParams({
+    userid: "seller", linkkey: "link-key", linkval: "link-value", mul_no: "2000",
+    var1: "soul_order", var2: "sp_test", price: "2490", pay_state: "4", ...overrides,
+  });
+  return new Request("https://before-life.co.kr/api/payment/webhook", {
+    method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body,
   });
 }

@@ -18,6 +18,21 @@ export function createMemoryPaymentRepository(): PaymentRepository {
     async getIntentByOrderId(orderId) {
       return intents.get(orderId) ?? null;
     },
+    async attachProviderRequest({ intentId, providerPaymentKey, providerCheckoutUrl }) {
+      const intent = [...intents.values()].find((candidate) => candidate.id === intentId);
+      if (!intent) throw new Error("payment intent not found");
+      if (intent.status !== "pending") throw new Error("payment intent is not pending");
+      if (intent.providerPaymentKey || intent.providerCheckoutUrl) {
+        if (
+          intent.providerPaymentKey !== providerPaymentKey
+          || intent.providerCheckoutUrl !== providerCheckoutUrl
+        ) throw new Error("payment provider request mismatch");
+        return intent;
+      }
+      const attached = { ...intent, providerPaymentKey, providerCheckoutUrl };
+      intents.set(intent.orderId, attached);
+      return attached;
+    },
     async approveIntent({ intentId, providerPaymentKey }) {
       const intent = [...intents.values()].find((candidate) => candidate.id === intentId);
       if (!intent) throw new Error("payment intent not found");

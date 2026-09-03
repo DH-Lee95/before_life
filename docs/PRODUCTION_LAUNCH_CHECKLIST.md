@@ -15,14 +15,15 @@
 - [ ] Supabase Auth Redirect URLs에 `https://대표도메인/auth/callback` 추가
 - [ ] 카카오 로그인 후 원래 결과 화면으로 복귀하는지 새 브라우저에서 확인
 
-## Toss Payments
+## 페이앱
 
-- [ ] 가맹점 심사와 정산 계좌 등록 완료
-- [ ] Vercel Production의 `NEXT_PUBLIC_TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`를 같은 상점의 `live_` 키 쌍으로 교체
-- [ ] Toss 개발자센터에서 `PAYMENT_STATUS_CHANGED` 웹훅을 `https://대표도메인/api/payment/webhook`으로 등록
-- [ ] 실제 990원 결제 1회 후 소울 1개가 한 번만 지급되는지 확인
+- [ ] 판매자 가입, 결제수단 신청, 정산 정보 등록 완료
+- [ ] Vercel Production에 `PAYAPP_USER_ID`, `PAYAPP_LINK_KEY`, `PAYAPP_LINK_VALUE`, `PAYAPP_MODE=live` 설정
+- [ ] 필요할 때 `PAYAPP_OPEN_PAY_TYPES`로 노출할 결제수단을 제한
+- [ ] `NEXT_PUBLIC_SITE_URL`이 실제 HTTPS 대표 도메인과 정확히 일치하는지 확인
+- [ ] 실제 1,000원 결제 1회 후 소울 1개가 한 번만 지급되는지 확인
 - [ ] 결제 성공 페이지를 새로고침해도 중복 지급되지 않는지 확인
-- [ ] Toss 관리자에서 테스트 결제를 전액 취소하고 웹훅으로 구매 소울이 한 번만 회수되는지 확인
+- [ ] 페이앱 관리자에서 결제를 전액 취소하고 feedback 콜백으로 구매 소울이 한 번만 회수되는지 확인
 - [ ] 부분 취소는 자동 소울 환산을 하지 않으므로 사용하지 않고, 발생 시 Vercel 오류 로그를 보고 수동 조정
 
 ## 사용자 보호와 운영

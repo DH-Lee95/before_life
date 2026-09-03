@@ -3,45 +3,34 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CheckoutClient } from "./CheckoutClient";
 
-const requestPayment = vi.hoisted(() => vi.fn());
-const setAmount = vi.hoisted(() => vi.fn());
-const renderPaymentMethods = vi.hoisted(() => vi.fn());
-const renderAgreement = vi.hoisted(() => vi.fn());
-
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams("orderId=soul_order"),
-}));
-vi.mock("@tosspayments/tosspayments-sdk", () => ({
-  ANONYMOUS: "ANONYMOUS",
-  loadTossPayments: vi.fn(async () => ({
-    widgets: () => ({ requestPayment, setAmount, renderPaymentMethods, renderAgreement }),
-  })),
-}));
+vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams("orderId=soul_order") }));
 
 describe("CheckoutClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("NEXT_PUBLIC_TOSS_CLIENT_KEY", "test_gck_client");
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
-      profileId: "sp_test", orderId: "soul_order", packId: "soul_3",
-      amountKrw: 2490, souls: 3, status: "pending",
-    }), { status: 200, headers: { "Content-Type": "application/json" } })));
+    vi.stubGlobal("open", vi.fn());
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === "POST") return new Response(JSON.stringify({ checkoutUrl: "https://payapp.kr/pay/2000" }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+      return new Response(JSON.stringify({
+        profileId: "sp_test", orderId: "soul_order", packId: "soul_3",
+        amountKrw: 2490, souls: 3, status: "pending",
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }));
   });
 
-  it("renders the server-priced Toss widget and requests redirect payment", async () => {
+  it("requests a PayApp checkout with a normalized phone number", async () => {
     render(<CheckoutClient />);
-
     expect(await screen.findByText("3소울 충전")).toBeInTheDocument();
-    await waitFor(() => expect(setAmount).toHaveBeenCalledWith({ currency: "KRW", value: 2490 }));
-    expect(renderPaymentMethods).toHaveBeenCalledWith({ selector: "#payment-method", variantKey: "DEFAULT" });
-    expect(renderAgreement).toHaveBeenCalledWith({ selector: "#agreement", variantKey: "AGREEMENT" });
 
+    fireEvent.change(screen.getByLabelText("휴대폰 번호"), { target: { value: "010-1234-5678" } });
     fireEvent.click(screen.getByRole("button", { name: "2,490원 결제하기" }));
-    expect(requestPayment).toHaveBeenCalledWith(expect.objectContaining({
-      orderId: "soul_order",
-      orderName: "전생서랍 3소울",
-      successUrl: expect.stringContaining("/payment/success"),
-      failUrl: expect.stringContaining("/payment/fail"),
-    }));
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith("/api/payment/request", expect.objectContaining({
+      method: "POST", body: JSON.stringify({ orderId: "soul_order", phone: "010-1234-5678" }),
+    })));
+    expect(open).toHaveBeenCalledWith("https://payapp.kr/pay/2000", "_self");
+    expect(screen.getByText(/페이앱에만 전달/)).toBeInTheDocument();
   });
 });

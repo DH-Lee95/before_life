@@ -10,7 +10,7 @@ describe("payment types", () => {
       soulProfileId: "sp_test",
       orderId: "soul_order",
       packId: "soul_1",
-      amountKrw: 990,
+      amountKrw: 1000,
       souls: 1,
       status: "pending",
       createdAt: "2026-08-28T09:00:00.000Z",

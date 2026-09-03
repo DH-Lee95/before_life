@@ -21,8 +21,11 @@ vi.mock("@/lib/auth/accountRepository", () => ({ getAccountRepository: () => ({ 
 describe("/api/payment/intents", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubEnv("NEXT_PUBLIC_TOSS_CLIENT_KEY", "test_gck_client");
-    vi.stubEnv("TOSS_SECRET_KEY", "test_gsk_secret");
+    vi.stubEnv("PAYAPP_USER_ID", "seller");
+    vi.stubEnv("PAYAPP_LINK_KEY", "link-key");
+    vi.stubEnv("PAYAPP_LINK_VALUE", "link-value");
+    vi.stubEnv("PAYAPP_MODE", "test");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "http://localhost:3000");
     getResult.mockResolvedValue({ profile: { id: "sp_test" } });
     getAuthenticatedUser.mockResolvedValue({ id: "user-id" });
     isSessionOwnedByUser.mockResolvedValue(true);
@@ -54,8 +57,8 @@ describe("/api/payment/intents", () => {
   });
 
   it("does not open live payments before business disclosures are configured", async () => {
-    vi.stubEnv("NEXT_PUBLIC_TOSS_CLIENT_KEY", "live_gck_client");
-    vi.stubEnv("TOSS_SECRET_KEY", "live_gsk_secret");
+    vi.stubEnv("PAYAPP_MODE", "live");
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://before-life.co.kr");
 
     const response = await POST(new Request("http://localhost/api/payment/intents", {
       method: "POST", body: JSON.stringify({ profileId: "sp_test", packId: "soul_1" }),
@@ -79,7 +82,7 @@ describe("/api/payment/intents", () => {
   it("returns an order only to its owning session", async () => {
     paymentRepository.getIntent.mockResolvedValue({
       orderId: "soul_order", soulProfileId: "sp_test", packId: "soul_1",
-      amountKrw: 990, souls: 1, status: "pending",
+      amountKrw: 1000, souls: 1, status: "pending",
     });
     const response = await GET(new Request("http://localhost/api/payment/intents?orderId=soul_order"));
 
