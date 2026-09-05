@@ -143,6 +143,9 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("모든 서술문을 '~했습니다', '~였습니다' 계열의 존댓말로 통일할 것");
     expect(prompt.user).toContain("이전 장의 결과");
     expect(prompt.user).toContain("새로운 문제");
+    expect(prompt.user).toContain("전환점의 첫 문장은 부당한 요구");
+    expect(prompt.user).toContain("두 사건을 막연히 '충돌했다'고 압축하지 말 것");
+    expect(prompt.user).toContain("선택의 실제 결과에 적힌 직업, 수입, 관계의 변화를 그대로");
     expect(prompt.outputFormat.schema.properties.chapters.minItems).toBe(4);
     expect(prompt.outputFormat.schema.properties.chapters.maxItems).toBe(4);
   });

@@ -1,4 +1,5 @@
 import type { PastLifeScenario } from "@/config/pastLifeScenarios";
+import { createScenarioAction, pastLifeStoryCores } from "@/config/pastLifeStoryCores";
 import type { AnswerId, LifeCanon, SoulArchetypeId } from "@/types/soul";
 import { withAnd, withObject } from "@/lib/content/koreanGrammar";
 
@@ -15,24 +16,17 @@ const motives: Record<SoulArchetypeId, { desire: string; fear: string; relations
   visionary: { desire: "아직 없는 더 나은 생활 방식을 현실로 만드는 것", fear: "빠른 성과 때문에 사람의 안전과 삶이 뒤로 밀리는 것", relationship: "완성되지 않은 생각을 처음 함께 시험한 동료", legacy: "채택되지 않은 생각도 다음 사람이 이어갈 수 있도록 남겼습니다." },
 };
 
-const actions: Record<AnswerId, string> = {
-  a: "가장 가까운 사람에게 사실을 먼저 알리고, 혼자 결론 내리지 않았습니다.",
-  b: "불이익을 감수하고 자신이 확인한 사실을 공개했습니다.",
-  c: "가족과 공동체가 함께 버틸 수 있는 대안을 만들어 설득했습니다.",
-  d: "쌓아온 이름을 걸고 잘못된 요구를 공식적으로 거절했습니다.",
-  e: "익숙한 자리를 떠나 필요한 사람들과 새로운 일을 시작했습니다.",
-  f: "숨겨진 기록을 끝까지 확인해 원래 주인에게 돌려주었습니다.",
-};
-
 export function createLifeCanon(
   scenario: PastLifeScenario,
   archetypeId: SoulArchetypeId,
   decisiveChoice: AnswerId,
 ): LifeCanon {
   const motive = motives[archetypeId];
-  const turningPoint = `${scenario.pressureSource}의 요구가 ${scenario.signatureObject}에 남은 사실과 정면으로 충돌한 날`;
-  const decisiveAction = actions[decisiveChoice] ?? actions.b;
-  const consequence = "그 선택으로 익숙한 자리와 수입 일부를 잃었지만, 가장 가까운 사람과 자신의 기준은 지킬 수 있었습니다.";
+  const storyCore = pastLifeStoryCores[scenario.id];
+  if (!storyCore) throw new Error(`스토리 핵심 설정이 없습니다: ${scenario.id}`);
+  const turningPoint = storyCore.turningPoint;
+  const decisiveAction = createScenarioAction(storyCore, decisiveChoice, motive.relationship);
+  const consequence = storyCore.consequence;
   const finalDay = `말년의 마지막 중요한 날, ${withObject(scenario.signatureObject)} 자신이 가장 믿는 사람에게 건네며 말하지 못한 마음과 선택이 남긴 영향을 설명했습니다.`;
 
   return {
@@ -41,7 +35,7 @@ export function createLifeCanon(
     centralFear: motive.fear,
     keyRelationship: motive.relationship,
     sharedObject: scenario.signatureObject,
-    secret: `${scenario.pressureSource}의 요구를 따르면 누군가의 몫이나 진실이 지워진다는 사실`,
+    secret: storyCore.secret,
     turningPoint,
     decisiveAction,
     consequence,
@@ -51,7 +45,7 @@ export function createLifeCanon(
     timeline: [
       { stage: "유년기", event: scenario.occupationPath },
       { stage: "청년기", event: `${withObject(scenario.meetingReason)} 계기로 ${withAnd(motive.relationship)} 가까워졌습니다.` },
-      { stage: "중년기", event: `${turningPoint}, ${decisiveAction} ${consequence}` },
+      { stage: "중년기", event: `${turningPoint} ${decisiveAction} ${consequence}` },
       { stage: "말년기", event: `${finalDay} ${motive.legacy}` },
     ],
   };

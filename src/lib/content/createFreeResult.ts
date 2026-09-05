@@ -248,7 +248,7 @@ function createCanonDeepDive(
         opening: `${context}. 어린 시절 당신은 ${record.occupationPath} 가족의 사랑을 말보다 책임과 생계로 배웠고, 그 방식은 훗날 가까운 아이를 지키려 할 때 다시 나타났습니다.`,
         chapters: [
           { title: "부모에게 배운 보호", paragraphs: [`가족은 당신을 아꼈지만 위험을 막는다는 이유로 선택을 대신하곤 했습니다. 당신은 인정받기 위해 도움을 청하지 않는 아이가 되었습니다.`, `${withSubject(canon.sharedObject)} 처음으로 가족의 뜻과 다른 길을 택했을 때 가지고 나온 물건이었습니다.`] },
-          { title: "사랑이라는 이름의 반복", paragraphs: [`세월이 흘러 당신은 어린 가족 또는 제자를 돌보게 됐습니다. 그 아이가 위험한 선택을 하자 이유를 듣기 전에 막아섰고, 자신이 받았던 보호를 그대로 반복했습니다.`, `${canon.turningPoint}, 아이는 보호받는 대신 믿어달라고 말했습니다. 그 문장에서 오래전 자신의 마음을 알아봤습니다.`] },
+          { title: "사랑이라는 이름의 반복", paragraphs: [`세월이 흘러 당신은 어린 가족 또는 제자를 돌보게 됐습니다. 그 아이가 위험한 선택을 하자 이유를 듣기 전에 막아섰고, 자신이 받았던 보호를 그대로 반복했습니다.`, `${canon.turningPoint} 그 사건을 지켜본 아이는 보호받는 대신 믿어달라고 말했습니다. 그 문장에서 오래전 자신의 마음을 알아봤습니다.`] },
           { title: "가족의 규칙을 바꾼 날", paragraphs: [`${canon.decisiveAction} 두려움이 아이의 부족함 때문이 아니라 또 가족을 잃을까 무서웠기 때문이라고 설명했습니다.`, `${canon.consequence} ${canon.legacy}`] },
         ],
         presentMeaning: `${presentBridge} 가족을 걱정할 때 대신 결정하기보다 자신의 두려움을 먼저 말하고 선택을 돌려주는 방식이 오래된 보호의 패턴을 바꿀 수 있습니다.`, readingTimeMinutes: 4,
@@ -261,10 +261,10 @@ function createLockedPreview(profile: SoulProfile, contentType: LockedContentTyp
   const canon = profile.lifeCanon;
   if (canon) {
     const previews: Record<LockedContentType, string> = {
-      past_love: `${record.meetingReason}에서 시작된 ${canon.keyRelationship}과의 관계. ${canon.sharedObject}에 숨은 비밀이 두 사람의 선택을 바꿉니다.`,
+      past_love: `${record.meetingReason}에서 시작된 ${withAnd(canon.keyRelationship)}의 관계. ${canon.sharedObject}에 숨은 비밀이 두 사람의 선택을 바꿉니다.`,
       last_day: `${canon.finalDay} 용서보다 먼저 돌려줘야 했던 진실이 남아 있습니다.`,
       wealth_status: `${record.socialClass}의 삶에서 ${withSubject(record.pressureSource)} 제안한 거래와 실제로 지킨 재산을 보여줍니다.`,
-      decisive_choice: `${canon.turningPoint}, 당신이 직접 고른 행동과 그 뒤 실제로 잃고 얻은 것을 보여줍니다.`,
+      decisive_choice: `${canon.turningPoint} 당신이 직접 고른 행동과 그 뒤 실제로 잃고 얻은 것을 보여줍니다.`,
       karma_trace: `${canon.centralFear} 때문에 혼자 감당하던 방식이 어떤 관계를 멀어지게 했는지 살펴봅니다.`,
       present_influence: `${record.workplaceDetail}에서 익힌 기준이 지금의 취향과 신뢰 방식에 남아 있습니다.`,
       family_bonds: `부모에게 배운 보호가 가까운 아이에게 반복된 순간과 그 반복을 멈춘 선택을 보여줍니다.`,

@@ -102,6 +102,25 @@ describe("validateGeneratedStory", () => {
     expect(createStoryRepairPrompt(broken, result.issues)).toContain("직책·잘못·피해");
   });
 
+  it("rejects a fabricated collision between an unexplained demand and an object", () => {
+    const broken = {
+      ...validStory,
+      chapters: validStory.chapters.map((chapter, index) => index === 1 ? {
+        ...chapter,
+        paragraphs: [
+          "토지 관리인의 요구가 학생들의 이름이 적힌 식물 표본첩에 남은 사실과 정면으로 충돌했습니다.",
+          chapter.paragraphs[1],
+        ],
+      } : chapter),
+    };
+
+    const result = validateGeneratedStory(broken);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.issues).toContain("요구와 물건 사이의 인과관계를 설명하지 않고 충돌했다고 압축한 문장이 있습니다.");
+  });
+
   it("rejects casual narrative endings that clash with the product's polite voice", () => {
     const broken = {
       ...validStory,

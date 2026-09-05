@@ -22,6 +22,8 @@ const VAGUE_OFFICIAL_PATTERNS = [
   /대가를 제자리로 돌려놓/,
 ];
 
+const UNEXPLAINED_CAUSAL_COLLISION = /요구가[^.!?]{0,100}(?:물건|기록|사실|표본첩|장부|편지|지도)[^.!?]{0,40}(?:정면으로\s*)?충돌/;
+
 export type StoryValidationResult =
   | { success: true; data: StoryNarrative }
   | { success: false; issues: string[] };
@@ -80,6 +82,9 @@ export function validateGeneratedStory(value: unknown): StoryValidationResult {
   if (VAGUE_OFFICIAL_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
   }
+  if (UNEXPLAINED_CAUSAL_COLLISION.test(serialized)) {
+    issues.push("요구와 물건 사이의 인과관계를 설명하지 않고 충돌했다고 압축한 문장이 있습니다.");
+  }
   if (collectNarrativeTexts(value).some((text) => /(?<!니)다\./.test(text))) {
     issues.push("본문 서술은 '~했습니다' 계열의 존댓말로 통일해야 합니다.");
   }
@@ -137,6 +142,9 @@ export function validateGeneratedWholeLife(value: unknown): WholeLifeValidationR
   }
   if (VAGUE_OFFICIAL_PATTERNS.some((pattern) => pattern.test(serialized))) {
     issues.push("누가 무슨 잘못을 했고 누가 어떤 피해를 입었는지 숨기는 모호한 표현이 있습니다.");
+  }
+  if (UNEXPLAINED_CAUSAL_COLLISION.test(serialized)) {
+    issues.push("요구와 물건 사이의 인과관계를 설명하지 않고 충돌했다고 압축한 문장이 있습니다.");
   }
   if (collectNarrativeTexts(value).some((text) => /(?<!니)다\./.test(text))) {
     issues.push("본문 서술은 '~했습니다' 계열의 존댓말로 통일해야 합니다.");
