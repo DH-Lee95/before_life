@@ -59,12 +59,12 @@ export const plannedPaidContent: PlannedPaidContent[] = [
     safetyFrame: "수익이나 투자 결과를 예측하지 않고 소비·저축·협상에서 반복될 수 있는 행동 패턴만 다룹니다.",
   },
   {
-    id: "unfinished_choice",
-    title: "이번 생에서 반드시 끝내고 싶은 미완의 선택",
-    hook: "이유 없이 계속 마음에 남는 길과 결정적 순간마다 망설이게 되는 진짜 이유",
-    includes: ["미완의 욕망", "결정을 막는 기억", "다시 오는 갈림길", "후회를 줄이는 행동"],
+    id: "missed_opportunity",
+    title: "계속 놓치게 되는 결정적 기회",
+    hook: "좋은 기회가 와도 마지막 순간에 물러서는 이유와 다음 기회를 잡기 위해 바꿔야 할 행동",
+    includes: ["반복해서 놓치는 기회", "마지막에 물러서는 이유", "기회를 알아보는 신호", "이번에는 잡기 위한 행동"],
     status: "planned",
     requestedByUser: false,
-    safetyFrame: "정해진 사명이나 운명을 단정하지 않고 사용자가 중요하게 여기는 가치와 선택 기준을 돌아보게 합니다.",
+    safetyFrame: "성공 시기나 결과를 보장하지 않고 중요한 순간에 반복되는 망설임과 현실적인 대응 방법을 돌아보게 합니다.",
   },
 ];
