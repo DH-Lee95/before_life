@@ -10,6 +10,113 @@ import { lockedContentTypes } from "@/config/contentTypes";
 import { createLifeCanon } from "@/lib/soul/createLifeCanon";
 
 describe("createFreeResult", () => {
+  it("renders LOVE, WEALTH_STATUS, and DECISIVE_CHOICE from different life scenes", () => {
+    const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
+    const archetype = soulArchetypes.find((item) => item.id === scenario.archetypeId)!;
+    const base = createSoulProfile({
+      nickname: "렌즈검수", birthDate: "1991-03-12", gender: "female",
+      answers: { inner_response: "d", decision_pattern: "a", emotional_trace: "b", conflict_style: "d", hidden_desire: "f", repeated_theme: "a", decisive_choice: "d" },
+    });
+    const profile = {
+      ...base,
+      archetypeId: scenario.archetypeId,
+      mainPastLife: { ...scenario, scenarioId: scenario.id, gender: base.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      lifeCanon: createLifeCanon(scenario, scenario.archetypeId, "d"),
+    };
+    const render = (recommendedContentType: "past_love" | "wealth_status" | "decisive_choice") => {
+      const result = createFreeResult({ ...profile, recommendedContentType });
+      return result.sections.records.find((record) => record.isUnlocked)!;
+    };
+    const love = render("past_love");
+    const wealth = render("wealth_status");
+    const choice = render("decisive_choice");
+
+    expect(love.chapters.map((chapter) => chapter.title)).toEqual(["말없이 가까워진 시간", "끝내 건네지 못한 말", "같은 자리에 없었던 두 사람"]);
+    expect(wealth.chapters.map((chapter) => chapter.title)).toEqual(["손에 쥐고 있던 생활", "값을 매길 수 없던 요구", "다음 달 달라진 것"]);
+    expect(choice.chapters.map((chapter) => chapter.title)).toEqual(["돌아서도 끝나지 않는 일", "손을 움직인 순간", "선택 다음 날"]);
+    expect(love.opening).not.toBe(wealth.opening);
+    expect(wealth.opening).not.toBe(choice.opening);
+    expect(JSON.stringify(love)).not.toContain(profile.lifeCanon.dramaticHook);
+    expect(JSON.stringify(wealth)).not.toContain(profile.lifeCanon.dramaticHook);
+  });
+
+  it("keeps upgraded free stories deterministic for identical input", () => {
+    const input = {
+      nickname: "결정론", birthDate: "1990-06-14", gender: "female" as const,
+      answers: { inner_response: "d" as const, decision_pattern: "d" as const, emotional_trace: "d" as const, conflict_style: "d" as const, hidden_desire: "f" as const, repeated_theme: "c" as const, decisive_choice: "d" as const },
+    };
+
+    const first = createSoulProfile(input);
+    const second = createSoulProfile(input);
+    expect(second.soulHash).toBe(first.soulHash);
+    expect(second).toEqual(first);
+    expect(createFreeResult(second)).toEqual(createFreeResult(first));
+  });
+
+  it("keeps representative lens stories within the readable free-preview range", () => {
+    const base = createSoulProfile({
+      nickname: "분량검수", birthDate: "1992-09-09", gender: "female",
+      answers: { inner_response: "a", decision_pattern: "b", emotional_trace: "c", conflict_style: "d", hidden_desire: "e", repeated_theme: "a", decisive_choice: "d" },
+    });
+    for (const scenario of pastLifeScenarios) {
+      const archetype = soulArchetypes.find((item) => item.id === scenario.archetypeId)!;
+      for (const config of lockedContentTypes) {
+        const profile = {
+          ...base,
+          archetypeId: scenario.archetypeId,
+          recommendedContentType: config.id,
+          mainPastLife: { ...base.mainPastLife, ...scenario, scenarioId: scenario.id, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+          lifeCanon: createLifeCanon(scenario, scenario.archetypeId, "d"),
+        };
+        const record = createFreeResult(profile).sections.records.find((item) => item.isUnlocked)!;
+        if (!("chapters" in record)) throw new Error("expected an unlocked narrative");
+        const length = [record.opening, ...record.chapters.flatMap((chapter) => [chapter.title, ...chapter.paragraphs]), record.presentMeaning].join("").length;
+
+        expect(length, `${scenario.id}/${config.id}: ${length}자`).toBeGreaterThanOrEqual(700);
+        expect(length, `${scenario.id}/${config.id}: ${length}자`).toBeLessThanOrEqual(1100);
+        expect(record.presentMeaning).not.toMatch(/때문에 당신은 지금도|당신은 지금도 .*못합니다/);
+        expect(JSON.stringify(record)).not.toMatch(/지식인였던|장인였던|자리이었습니다|관사이었습니다|딸와|관리인와|상인와|선장와|귀환병와|통신원와/);
+        expect(record.opening).not.toMatch(/^(?:\d+세기|사건이 시작되기 전|당신이 원한 것은)/);
+        expect(JSON.stringify(record)).not.toMatch(/신뢰를 쌓|생활의 바탕|실제로 잃은 몫|생존 방식이 부딪|성향을 그대로 외친|관계는 사건과 함께 끝나지|주인공/);
+
+        const paragraphs = [record.opening, ...record.chapters.flatMap((chapter) => chapter.paragraphs)];
+        for (const paragraph of paragraphs) {
+          expect(paragraph.split("당신은 ").length - 1, `${scenario.id}/${config.id}: ${paragraph}`).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  it("opens the three showcase stories inside a concrete scene", () => {
+    const render = (scenarioId: string, recommendedContentType: "past_love" | "wealth_status" | "decisive_choice") => {
+      const scenario = pastLifeScenarios.find((item) => item.id === scenarioId)!;
+      const archetype = soulArchetypes.find((item) => item.id === scenario.archetypeId)!;
+      const base = createSoulProfile({
+        nickname: "장면검수", birthDate: "1991-03-12", gender: "female",
+        answers: { inner_response: "d", decision_pattern: "a", emotional_trace: "b", conflict_style: "d", hidden_desire: "f", repeated_theme: "a", decisive_choice: "d" },
+      });
+      const profile = {
+        ...base,
+        archetypeId: scenario.archetypeId,
+        recommendedContentType,
+        mainPastLife: { ...scenario, scenarioId: scenario.id, gender: base.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+        lifeCanon: createLifeCanon(scenario, scenario.archetypeId, "d"),
+      };
+      return createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
+    };
+
+    const scotlandLove = render("scholar-scotland-school", "past_love");
+    const veniceChoice = render("artisan-venice-glass", "decisive_choice");
+    const jejuWealth = render("caretaker-jeju-clinic", "wealth_status");
+
+    expect(scotlandLove.opening).toMatch(/장날.*학교 문.*계약서|학교 문.*장날.*계약서/);
+    expect(JSON.stringify(scotlandLove)).toMatch(/난롯가|학교 열쇠|살림방/);
+    expect(veniceChoice.opening).toMatch(/푸른 잔.*금|금.*푸른 잔/);
+    expect(JSON.stringify(veniceChoice)).toMatch(/뜨거운 물|화로 열쇠|견습생/);
+    expect(jejuWealth.opening).toMatch(/약 창고|명단|아이/);
+    expect(JSON.stringify(jejuWealth)).toMatch(/식량표|관사|이름.*다시/);
+  });
+
   it("returns one full free record and five safe paid previews", () => {
     const profile = createSoulProfile({
         nickname: "서연",
@@ -27,6 +134,7 @@ describe("createFreeResult", () => {
     const content = createFreeResult(profile);
 
     expect(content.sections.location).toBeTruthy();
+    expect(content.freeStoryVersion).toBe("free-story.2026-09-05.v4");
     expect(content.sections.occupation).toBeTruthy();
     expect(content.sections.love).toBeTruthy();
     expect(content.sections.success).toBeTruthy();
@@ -213,8 +321,12 @@ describe("createFreeResult", () => {
         const validation = story && "chapters" in story ? validateGeneratedStory(story) : { success: false };
         expect(validation, `${scenario.id}/${contentType.id}`).toMatchObject({ success: true });
         const text = JSON.stringify(story);
-        expect(text).toContain(scenario.signatureObject);
-        expect(text).toContain(profile.lifeCanon.dramaticHook);
+        if (profile.lifeCanon.lifeBlueprint) {
+          expect(text).not.toContain(profile.lifeCanon.dramaticHook);
+        } else {
+          expect(text).toContain(scenario.signatureObject);
+          expect(text).toContain(profile.lifeCanon.dramaticHook);
+        }
         expect(text).not.toMatch(/(?:관리|공방주|책임자)은|전보이었습니다|동료과/);
         if (!scenario.historicalTerms.includes("기차역") && Number(scenario.period.slice(0, 2)) < 19) {
           expect(text).not.toMatch(/기차역|자동차|전화|전기/);
@@ -223,7 +335,7 @@ describe("createFreeResult", () => {
     }
   });
 
-  it("makes the Scottish scholar's preview a disappearance mystery instead of a school anecdote", () => {
+  it("makes the Scottish scholar's final-day lens about later life instead of replaying the disappearance", () => {
     const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
     const archetype = soulArchetypes.find((item) => item.id === "scholar")!;
     const baseProfile = createSoulProfile({
@@ -234,21 +346,21 @@ describe("createFreeResult", () => {
       ...baseProfile,
       archetypeId: "scholar" as const,
       recommendedContentType: "last_day" as const,
-      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      mainPastLife: { ...scenario, scenarioId: scenario.id, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
       lifeCanon: createLifeCanon(scenario, "scholar", "b"),
     };
     const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
     const text = JSON.stringify(story);
 
     expect(text).toContain("상속녀");
-    expect(text).toMatch(/실종|사라/);
+    expect(text).not.toMatch(/실종|감금|거짓 증언/);
     expect(text).toContain(scenario.signatureObject);
     expect(text).not.toMatch(/아이|학생|제자|표본첩|식물 관찰|학생 또는 농부|왜 그런 선택을 했는지|그 현실이 선택을 어렵게 했지만/);
-    expect(text.split(scenario.pressureSource)).toHaveLength(2);
+    expect(text).not.toContain(scenario.pressureSource);
     expect(text.split(scenario.signatureObject).length - 1).toBeLessThanOrEqual(1);
-    expect(text).toContain("그 뒤 상대는 당신이 남긴 뜻을 이어갔습니다.");
+    expect(text).toContain(profile.lifeCanon.lifeTimeline!.finalYears.summary);
     expect(text).not.toContain("해야 할 말을 남긴 채 멀어졌습니다");
-    expect(text).toContain("서로의 상처를 충분히 말하지 못했습니다");
+    expect(text).toContain(profile.lifeCanon.lifeBlueprint!.finalMemory);
   });
 
   it("states the wealth conflict once instead of repeating the full premise", () => {
@@ -260,7 +372,7 @@ describe("createFreeResult", () => {
     });
     const profile = {
       ...baseProfile, archetypeId: "steward" as const, recommendedContentType: "wealth_status" as const,
-      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      mainPastLife: { ...scenario, scenarioId: scenario.id, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
       lifeCanon: createLifeCanon(scenario, "steward", "a"),
     };
     const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
@@ -280,7 +392,7 @@ describe("createFreeResult", () => {
     });
     const profile = {
       ...baseProfile, archetypeId: "scholar" as const, recommendedContentType: "present_influence" as const,
-      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      mainPastLife: { ...scenario, scenarioId: scenario.id, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
       lifeCanon: createLifeCanon(scenario, "scholar", "f"),
     };
     const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
@@ -300,7 +412,7 @@ describe("createFreeResult", () => {
     });
     const profile = {
       ...baseProfile, archetypeId: "pioneer" as const, recommendedContentType: "past_love" as const,
-      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      mainPastLife: { ...scenario, scenarioId: scenario.id, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
       lifeCanon: createLifeCanon(scenario, "pioneer", "b"),
     };
     const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
@@ -320,7 +432,7 @@ describe("createFreeResult", () => {
     });
     const profile = {
       ...baseProfile, archetypeId: "visionary" as const, recommendedContentType: "decisive_choice" as const,
-      mainPastLife: { ...scenario, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
+      mainPastLife: { ...scenario, scenarioId: scenario.id, gender: baseProfile.mainPastLife.gender, hiddenNature: archetype.hiddenNatures[0], coreTheme: archetype.coreThemes[0] },
       lifeCanon: createLifeCanon(scenario, "visionary", "a"),
     };
     const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;

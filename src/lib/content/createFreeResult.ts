@@ -1,11 +1,15 @@
 import { lockedContentTypes } from "@/config/contentTypes";
 import type { FreeResultContent, LockedContentType, SoulProfile, StoryNarrative } from "@/types/soul";
+import { createBlueprintStory } from "./createBlueprintStory";
 import { asIdentity, asPastRole, asRole, withAnd, withDirection, withObject, withSubject } from "./koreanGrammar";
+
+export const FREE_STORY_VERSION = "free-story.2026-09-05.v4";
 
 export function createFreeResult(profile: SoulProfile): FreeResultContent {
   const record = profile.mainPastLife;
 
   return {
+    freeStoryVersion: FREE_STORY_VERSION,
     title: `${profile.nickname || "당신"}님의 전생 서랍`,
     summary: `${record.period} ${record.region}. 당신에게 이어진 대표 기록은 ${record.location}에서 ${asRole(record.occupation)} 살아간 ${genderLabel(record.gender)}의 삶입니다.${record.historicalContext ? ` ${record.historicalContext}` : ""}`,
     natureSummary: profile.natureSummary,
@@ -67,6 +71,8 @@ function createDeepDive(
   profile: SoulProfile,
   contentType: (typeof lockedContentTypes)[number]["id"],
 ): StoryBody {
+  const blueprintStory = createBlueprintStory(profile, contentType);
+  if (blueprintStory) return blueprintStory;
   if (profile.lifeCanon) return createCanonDeepDive(profile, contentType);
   const record = profile.mainPastLife;
   const sharedEnding = `${record.coreTheme.description} 이 마음은 정해진 운명이 아닙니다. 다만 당신이 어떤 순간을 쉽게 잊지 못하는지 보여주는 단서가 될 수 있습니다.`;

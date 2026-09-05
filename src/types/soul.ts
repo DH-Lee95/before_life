@@ -81,6 +81,82 @@ export type PastLifeRoleFamily =
   | "travel" | "records" | "care" | "craft" | "trade"
   | "study" | "stewardship" | "performance" | "technology";
 
+export const decisionStyles = [
+  "ALLY", "TRUTH", "COMMUNITY", "DEFIANCE", "DEPARTURE", "RESTORATION",
+] as const;
+export type DecisionStyle = (typeof decisionStyles)[number];
+
+export type ContentLens =
+  | "LOVE" | "WEALTH_STATUS" | "DECISIVE_CHOICE" | "UNFINISHED_PROMISE"
+  | "FINAL_DAY" | "PRESENT_TRACE" | "PARENT_CHILD";
+
+export type ObjectRole = "EVIDENCE" | "MEMORY" | "SYMBOL" | "MACGUFFIN" | "TOOL" | "LOSS";
+
+export type TimelineEvent = {
+  ageRange?: string;
+  title?: string;
+  summary: string;
+  relatedPerson?: string;
+  location?: string;
+};
+
+export type LifeTimeline = {
+  youth: TimelineEvent;
+  earlyAdult: TimelineEvent;
+  keyRelationship: TimelineEvent;
+  centralConflict: TimelineEvent;
+  aftermath: TimelineEvent;
+  laterLife: TimelineEvent;
+  finalYears: TimelineEvent;
+};
+
+export type LifeBlueprintValidation = {
+  hasRelationshipReason: boolean;
+  hasTrustReason: boolean;
+  hasAntagonistMotive: boolean;
+  hasNoEasyExit: boolean;
+  hasEscalation: boolean;
+  hasCost: boolean;
+};
+
+export type LifeBlueprintVariantBundle = {
+  id: string;
+  relationship?: Pick<LifeBlueprint, "keyRelationship" | "relationshipOrigin" | "trustReason">;
+  antagonist?: Pick<LifeBlueprint, "antagonistMotive" | "antagonistInterestInProtagonist">;
+  hiddenTruth?: Pick<LifeBlueprint, "midpointRevelation">;
+  compatibleDecisionStyles?: readonly DecisionStyle[];
+};
+
+export type LifeBlueprint = {
+  protagonistDesire: string;
+  keyRelationship: string;
+  relationshipOrigin: string;
+  trustReason: string;
+  protagonistInvolvement: string;
+  antagonistMotive: string;
+  antagonistInterestInProtagonist: string;
+  noEasyExit: string;
+  incitingIncident: string;
+  firstEscalation: string;
+  midpointRevelation: string;
+  pointOfNoReturn: string;
+  climax: string;
+  aftermath: string;
+  actualLoss: string;
+  actualGainOrPreservedThing: string;
+  unspokenWords: string;
+  promise: string;
+  promiseBreakReason: string;
+  lastVisitor: string;
+  finalMemory: string;
+  objectRole: ObjectRole;
+  dramaticHook: string;
+  decisionActions: Record<DecisionStyle, string>;
+  timeline: LifeTimeline;
+  validation: LifeBlueprintValidation;
+  variantBundles?: readonly LifeBlueprintVariantBundle[];
+};
+
 export type LifeCanon = {
   scenarioId: string;
   centralDesire: string;
@@ -97,6 +173,10 @@ export type LifeCanon = {
   finalDay: string;
   historicalTerms: string[];
   timeline: Array<{ stage: WholeLifeStage; event: string }>;
+  storySchemaVersion?: "life-blueprint.v1";
+  decisionStyle?: DecisionStyle;
+  lifeBlueprint?: LifeBlueprint;
+  lifeTimeline?: LifeTimeline;
 };
 
 export type NarrativeTheme = {
@@ -132,6 +212,7 @@ export type SoulProfile = {
 };
 
 export type FreeResultContent = {
+  freeStoryVersion?: string;
   title: string;
   summary: string;
   natureSummary: NatureSummary;

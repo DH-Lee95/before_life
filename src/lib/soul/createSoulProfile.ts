@@ -9,7 +9,7 @@ import { createSoulId } from "./createSoulId";
 import { createLifeCanon } from "./createLifeCanon";
 import { INPUT_VERSION, normalizeSoulInput } from "./normalizeInput";
 
-export const ENGINE_VERSION = "soul-engine.2026-09-05.v8";
+export const ENGINE_VERSION = "soul-engine.2026-09-05.v9";
 
 export function createSoulProfile(input: SoulInput): SoulProfile {
   const normalized = normalizeSoulInput(input);

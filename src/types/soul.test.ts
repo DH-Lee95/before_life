@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
 
-import { soulArchetypeIds, type LifeCanon, type PublicSoulProfile, type SoulArchetypeId, type SoulInput } from "./soul";
+import { decisionStyles, soulArchetypeIds, type LifeBlueprintVariantBundle, type LifeCanon, type PublicSoulProfile, type SoulArchetypeId, type SoulInput } from "./soul";
 
 describe("soul types", () => {
+  it("defines the six decision styles in answer order", () => {
+    expect(decisionStyles).toEqual(["ALLY", "TRUTH", "COMMUNITY", "DEFIANCE", "DEPARTURE", "RESTORATION"]);
+  });
+
+  it("supports compatible scenario-level variant bundles without enabling arbitrary combinations", () => {
+    const bundle: LifeBlueprintVariantBundle = {
+      id: "trusted-colleague",
+      relationship: { keyRelationship: "오래 함께 일한 동료", relationshipOrigin: "견습 시절 만났습니다.", trustReason: "여러 번 서로의 판단을 확인했습니다." },
+      compatibleDecisionStyles: ["ALLY", "COMMUNITY"],
+    };
+
+    expect(bundle.compatibleDecisionStyles).not.toContain("DEFIANCE");
+  });
+
   it("accepts the phase 1 input contract", () => {
     const input: SoulInput = {
       nickname: "서연",

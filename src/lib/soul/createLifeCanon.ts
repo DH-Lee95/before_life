@@ -1,6 +1,7 @@
 import type { PastLifeScenario } from "@/config/pastLifeScenarios";
+import { pastLifeBlueprints } from "@/config/pastLifeBlueprints";
 import { createScenarioAction, pastLifeStoryCores } from "@/config/pastLifeStoryCores";
-import type { AnswerId, LifeCanon, SoulArchetypeId } from "@/types/soul";
+import type { AnswerId, DecisionStyle, LifeCanon, SoulArchetypeId } from "@/types/soul";
 import { withAnd, withObject } from "@/lib/content/koreanGrammar";
 
 const motives: Record<SoulArchetypeId, { desire: string; fear: string; legacy: string }> = {
@@ -16,6 +17,19 @@ const motives: Record<SoulArchetypeId, { desire: string; fear: string; legacy: s
   visionary: { desire: "아직 없는 더 나은 생활 방식을 현실로 만드는 것", fear: "빠른 성과 때문에 사람의 안전과 삶이 뒤로 밀리는 것", legacy: "채택되지 않은 생각도 다음 사람이 이어갈 수 있도록 남겼습니다." },
 };
 
+const decisionStyleByAnswer: Record<AnswerId, DecisionStyle> = {
+  a: "ALLY",
+  b: "TRUTH",
+  c: "COMMUNITY",
+  d: "DEFIANCE",
+  e: "DEPARTURE",
+  f: "RESTORATION",
+};
+
+export function getDecisionStyle(answerId: AnswerId): DecisionStyle {
+  return decisionStyleByAnswer[answerId];
+}
+
 export function createLifeCanon(
   scenario: PastLifeScenario,
   archetypeId: SoulArchetypeId,
@@ -24,17 +38,20 @@ export function createLifeCanon(
   const motive = motives[archetypeId];
   const storyCore = pastLifeStoryCores[scenario.id];
   if (!storyCore) throw new Error(`스토리 핵심 설정이 없습니다: ${scenario.id}`);
+  const lifeBlueprint = pastLifeBlueprints[scenario.id as keyof typeof pastLifeBlueprints];
+  const decisionStyle = getDecisionStyle(decisiveChoice);
   const turningPoint = storyCore.turningPoint;
-  const decisiveAction = createScenarioAction(storyCore, decisiveChoice, storyCore.keyRelationship);
-  const consequence = storyCore.consequence;
+  const decisiveAction = lifeBlueprint?.decisionActions[decisionStyle]
+    ?? createScenarioAction(storyCore, decisiveChoice, storyCore.keyRelationship);
+  const consequence = lifeBlueprint?.aftermath ?? storyCore.consequence;
   const finalDay = `말년의 마지막 중요한 날, ${withObject(scenario.signatureObject)} 자신이 가장 믿는 사람에게 건네며 말하지 못한 마음과 선택이 남긴 영향을 설명했습니다.`;
 
-  return {
+  const canon: LifeCanon = {
     scenarioId: scenario.id,
-    centralDesire: motive.desire,
+    centralDesire: lifeBlueprint?.protagonistDesire ?? motive.desire,
     centralFear: motive.fear,
-    keyRelationship: storyCore.keyRelationship,
-    dramaticHook: storyCore.dramaticHook,
+    keyRelationship: lifeBlueprint?.keyRelationship ?? storyCore.keyRelationship,
+    dramaticHook: lifeBlueprint?.dramaticHook ?? storyCore.dramaticHook,
     hookKeywords: [...storyCore.hookKeywords],
     sharedObject: scenario.signatureObject,
     secret: storyCore.secret,
@@ -46,9 +63,20 @@ export function createLifeCanon(
     historicalTerms: [...scenario.historicalTerms],
     timeline: [
       { stage: "유년기", event: scenario.occupationPath },
-      { stage: "청년기", event: `${withObject(scenario.meetingReason)} 계기로 ${withAnd(storyCore.keyRelationship)} 가까워졌습니다.` },
+      { stage: "청년기", event: `${withObject(scenario.meetingReason)} 계기로 ${withAnd(lifeBlueprint?.keyRelationship ?? storyCore.keyRelationship)} 가까워졌습니다.` },
       { stage: "중년기", event: `${turningPoint} ${decisiveAction} ${consequence}` },
-      { stage: "말년기", event: `${finalDay} ${motive.legacy}` },
+      { stage: "말년기", event: lifeBlueprint?.timeline.finalYears.summary ?? `${finalDay} ${motive.legacy}` },
     ],
   };
+
+  if (lifeBlueprint) {
+    canon.storySchemaVersion = "life-blueprint.v1";
+    canon.decisionStyle = decisionStyle;
+    canon.lifeBlueprint = lifeBlueprint;
+    canon.lifeTimeline = lifeBlueprint.timeline;
+  } else {
+    canon.decisionStyle = decisionStyle;
+  }
+
+  return canon;
 }
