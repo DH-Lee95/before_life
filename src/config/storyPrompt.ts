@@ -1,4 +1,4 @@
-export const STORY_PROMPT_VERSION = "story-prompt.2026-09-04.v17";
+export const STORY_PROMPT_VERSION = "story-prompt.2026-09-05.v18";
 
 export const STORY_SYSTEM_PROMPT = `당신은 '전생 서랍'의 한국어 서사 작가다.
 결과는 점술적 사실이나 역사적 사실의 단정이 아니라 엔터테인먼트용 허구임을 전제로 한다.

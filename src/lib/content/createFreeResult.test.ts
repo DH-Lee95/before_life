@@ -214,6 +214,7 @@ describe("createFreeResult", () => {
         expect(validation, `${scenario.id}/${contentType.id}`).toMatchObject({ success: true });
         const text = JSON.stringify(story);
         expect(text).toContain(scenario.signatureObject);
+        expect(text).toContain(profile.lifeCanon.dramaticHook);
         expect(text).not.toMatch(/(?:관리|공방주|책임자)은|전보이었습니다|동료과/);
         if (!scenario.historicalTerms.includes("기차역") && Number(scenario.period.slice(0, 2)) < 19) {
           expect(text).not.toMatch(/기차역|자동차|전화|전기/);
@@ -222,7 +223,7 @@ describe("createFreeResult", () => {
     }
   });
 
-  it("makes the Scottish teacher's last day personal instead of repeating a generated premise", () => {
+  it("makes the Scottish scholar's preview a disappearance mystery instead of a school anecdote", () => {
     const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
     const archetype = soulArchetypes.find((item) => item.id === "scholar")!;
     const baseProfile = createSoulProfile({
@@ -239,9 +240,10 @@ describe("createFreeResult", () => {
     const story = createFreeResult(profile).sections.records.find((record) => record.isUnlocked)!;
     const text = JSON.stringify(story);
 
-    expect(text).toContain("당신의 질문을 귀찮아하지 않았던 어린 제자");
+    expect(text).toContain("상속녀");
+    expect(text).toMatch(/실종|사라/);
     expect(text).toContain(scenario.signatureObject);
-    expect(text).not.toMatch(/학생 또는 농부|왜 그런 선택을 했는지|그 현실이 선택을 어렵게 했지만/);
+    expect(text).not.toMatch(/아이|학생|제자|표본첩|식물 관찰|학생 또는 농부|왜 그런 선택을 했는지|그 현실이 선택을 어렵게 했지만/);
     expect(text.split(scenario.pressureSource)).toHaveLength(2);
     expect(text.split(scenario.signatureObject).length - 1).toBeLessThanOrEqual(1);
     expect(text).toContain("그 뒤 상대는 당신이 남긴 뜻을 이어갔습니다.");

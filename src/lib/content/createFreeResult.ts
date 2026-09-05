@@ -180,12 +180,13 @@ function createCanonDeepDive(
   const canon = profile.lifeCanon;
   const context = `${record.period} ${record.region}, ${record.location}`;
   const objectName = canon.sharedObject.trim().split(/\s+/).at(-1) ?? canon.sharedObject;
+  const dramaticHook = canon.dramaticHook || canon.turningPoint;
   const presentBridge = "이 이야기는 정해진 운명이 아니라, 지금도 반복되기 쉬운 선택의 방식을 비춰주는 장면입니다.";
 
   switch (contentType) {
     case "past_love":
       return {
-        opening: `${context}. ${record.workplaceDetail}에서 당신은 ${withObject(record.meetingReason)} 계기로 ${withObject(canon.keyRelationship)} 만났습니다. 두 사람 사이에는 곧 ${withSubject(canon.sharedObject)} 남았습니다.`,
+        opening: `${context}. ${dramaticHook} ${record.workplaceDetail}에서 당신은 ${withObject(record.meetingReason)} 계기로 ${withObject(canon.keyRelationship)} 만났습니다. 두 사람 사이에는 곧 ${withSubject(canon.sharedObject)} 남았습니다.`,
         chapters: [
           { title: "두 사람이 서로를 알아본 일", paragraphs: [`${record.occupationPath} 그 사람은 당신이 일을 처리하는 속도보다 누구의 사정을 먼저 살피는지를 알아봤습니다. 당신도 그 사람이 결과보다 약속을 지키는 태도에 마음을 열었습니다.`, `두 사람은 ${withObject(objectName)} 함께 간직했습니다. 그것은 사랑의 증표이기 전에 서로에게 숨기지 않기로 한 첫 약속이었습니다.`] },
           { title: "숨긴 진실이 드러난 날", paragraphs: [`어느 날 ${withSubject(record.pressureSource)} 문제를 모른 척하면 지금의 자리와 수입을 지켜주겠다고 제안했습니다. 당신은 그 요구가 누군가에게 어떤 손해를 남기는지 확인했습니다.`, `당신이 문제를 공개하겠다고 하자 상대는 두 사람이 잃게 될 생활과 계획이 두렵다고 털어놓았습니다. 두 사람은 서로를 의심하는 대신, 각자가 감당할 수 있는 것과 없는 것을 처음으로 분명히 말했습니다.`] },
@@ -195,7 +196,7 @@ function createCanonDeepDive(
       };
     case "last_day":
       return {
-        opening: `${context}. 몸을 일으키기 어려워진 어느 오후, 당신은 ${withObject(canon.sharedObject)} 곁에 두고 ${withObject(canon.keyRelationship)} 마지막으로 불러 달라는 전갈을 보냈습니다. 오래전의 선택이 누구를 지켰고 누구에게 상처를 남겼는지, 이번에는 숨김없이 말하기 위해서였습니다.`,
+        opening: `${context}. 몸을 일으키기 어려워진 어느 오후, 당신은 ${withObject(canon.sharedObject)} 곁에 두고 ${withObject(canon.keyRelationship)} 마지막으로 불러 달라는 전갈을 보냈습니다. ${dramaticHook} 그날의 선택이 누구를 지켰고 누구에게 상처를 남겼는지, 이번에는 숨김없이 말하기 위해서였습니다.`,
         chapters: [
           { title: "문 앞에 선 사람", paragraphs: [`그 사람은 해가 기울 무렵 문 앞에 섰습니다. 두 사람은 ${withObject(record.meetingReason)} 계기로 가까워졌습니다. 삶의 방향을 바꾼 사건 뒤에도 곁을 지켰지만, 서로의 상처를 충분히 말하지 못했습니다.`, `오래전 ${withAnd(record.pressureSource)} 맞선 뒤, 당신은 자신의 선택이 옳다고 믿었습니다. 하지만 그 결정이 두 사람의 생활에 줄 영향을 상대에게 충분히 말하지 않았습니다. 당신은 먼저 사과했습니다. 가장 두려웠던 일은 ${asIdentity(canon.centralFear)}.`] },
           { title: "물건에 남은 기억", paragraphs: [`당신이 ${withObject(objectName)} 살펴보자 두 사람이 처음 나눈 약속과 그 뒤 달라진 삶의 흔적이 함께 드러났습니다. 당신은 기억나는 일을 시간순으로 말하되, 자신에게 유리한 대목만 골라내지 않았습니다.`, `이 물건은 결백을 증명하는 유품이 아니었습니다. 당신은 상대가 당시의 기억과 뒤늦게 알게 된 사정을 스스로 판단할 수 있도록 ${withObject(objectName)} 건넸습니다.`] },
@@ -205,7 +206,7 @@ function createCanonDeepDive(
       };
     case "wealth_status":
       return {
-        opening: `${context}. ${record.historicalContext} ${asPastRole(record.socialClass)} 당신에게 돈은 사치보다 원하지 않는 요구를 거절할 수 있는 선택권이었습니다.`,
+        opening: `${context}. ${dramaticHook} ${record.historicalContext} ${asPastRole(record.socialClass)} 당신에게 돈은 사치보다 원하지 않는 요구를 거절할 수 있는 선택권이었습니다.`,
         chapters: [
           { title: "당신이 실제로 가진 것", paragraphs: [`${record.occupationPath} 큰 수입을 얻지는 못했지만 ${withObject(record.signatureObject)} 맡길 만큼 마을 사람들의 신뢰를 얻었습니다.`, `당신이 원한 것은 부자가 되는 일보다 ${canon.centralDesire}이었습니다. 그래서 돈을 모을 때에도 누구와 어떤 약속을 지킬지를 함께 계산했습니다.`] },
           { title: "가장 비싼 제안", paragraphs: [`${withSubject(record.pressureSource)} 요구를 받아들이는 조건으로 여러 해 수입에 해당하는 돈을 제시했습니다. 당신은 ${canon.sharedObject}에서 누군가의 몫이 지워진 흔적을 확인했고, 돈을 받으면 그 사실을 공개할 수 없다는 점도 알았습니다.`, `제안을 거절하면 자리와 수입을 잃을 수 있었습니다. 당신은 당장의 손익보다 그 뒤에도 마주칠 사람들의 얼굴을 떠올렸습니다.`] },
@@ -215,7 +216,7 @@ function createCanonDeepDive(
       };
     case "decisive_choice":
       return {
-        opening: `${context}. ${record.pressureSource}의 요구와 당신이 직접 확인한 내용이 어긋났습니다. 당신은 ${withObject(canon.sharedObject)} 다시 살피며 어느 쪽의 손실을 감당할지 결정해야 했습니다.`,
+        opening: `${context}. ${dramaticHook} ${record.pressureSource}의 요구와 당신이 직접 확인한 내용이 어긋났습니다. 당신은 ${withObject(canon.sharedObject)} 다시 살피며 어느 쪽의 손실을 감당할지 결정해야 했습니다.`,
         chapters: [
           { title: "거절하면 잃는 것", paragraphs: [`상대는 요구를 따르기만 하면 지금의 자리와 생활을 보장하겠다고 약속했습니다. ${asPastRole(record.socialClass)} 당신에게 그 제안은 가볍지 않았습니다.`, `거절하면 수입과 익숙한 자리를 잃을 수 있었습니다. 받아들이면 ${withObject(objectName)} 통해 확인한 사실을 감춰야 했고, 그 결과를 다른 사람들이 떠안게 됐습니다.`] },
           { title: "당신이 직접 고른 행동", paragraphs: [`${canon.decisiveAction} 당신은 누가 무엇을 잃게 되는지 차례로 설명하고, 자신이 감당할 몫부터 밝혔습니다.`, `${withSubject(canon.keyRelationship)} 결정을 대신하지는 않았습니다. 다만 당신이 두려움 때문에 사실을 줄이지 않도록 곁에서 질문했습니다.`] },
@@ -225,7 +226,7 @@ function createCanonDeepDive(
       };
     case "karma_trace":
       return {
-        opening: `${context}. 당신은 ${record.workplaceDetail}에서 남들보다 먼저 문제를 알아차렸지만, ${canon.centralFear} 때문에 혼자 감당하기 시작했습니다.`,
+        opening: `${context}. ${dramaticHook} 당신은 ${record.workplaceDetail}에서 남들보다 먼저 문제를 알아차렸지만, ${canon.centralFear} 때문에 혼자 감당하기 시작했습니다.`,
         chapters: [
           { title: "필요한 사람이 되고 싶었던 마음", paragraphs: [`${record.occupationPath} 부탁받기 전에 움직이는 습관은 처음에는 신뢰를 만들었습니다. 그러나 주변 사람들은 당신이 늘 괜찮을 것이라고 믿게 되었습니다.`, `${withSubject(canon.keyRelationship)} 도움을 나누자고 했지만 당신은 약한 모습을 보이면 관계까지 잃을까 봐 거절했습니다.`] },
           { title: "침묵이 만든 오해", paragraphs: [`문제를 숨긴 채 ${withObject(canon.sharedObject)} 혼자 지키는 동안 알아주기를 바라는 마음이 쌓였습니다. 아무도 눈치채지 못하자 당신은 갑자기 모든 관계에서 멀어지고 싶어졌습니다.`, `숨긴 문제가 더는 감춰지지 않자, 말하지 않은 배려는 상대에게 참여할 기회를 주지 않았다는 사실이 드러났습니다.`] },
@@ -235,7 +236,7 @@ function createCanonDeepDive(
       };
     case "present_influence":
       return {
-        opening: `${context}. 당신의 하루는 ${record.workplaceDetail}의 리듬에 맞춰 움직였습니다. ${withObject(canon.sharedObject)} 다루며 익힌 판단 방식은 사람과 약속을 보는 기준에도 남았습니다.`,
+        opening: `${context}. ${dramaticHook} 당신의 하루는 ${record.workplaceDetail}의 리듬에 맞춰 움직였습니다. ${withObject(canon.sharedObject)} 다루며 익힌 판단 방식은 사람과 약속을 보는 기준에도 남았습니다.`,
         chapters: [
           { title: "몸이 먼저 기억한 기준", paragraphs: [`${record.occupationPath} 눈에 띄는 결과보다 반복해도 무너지지 않는 방식을 중요하게 여겼습니다.`, `${withSubject(objectName)} 여러 사람이 직접 확인한 내용을 함께 남긴 물건이었습니다. 당신은 완성된 결과보다 누가 무엇을 확인했는지가 분명한 과정을 더 믿었습니다.`] },
           { title: "사람을 믿는 방식", paragraphs: [`${withObject(canon.keyRelationship)} 처음 오래 이야기한 계기는 ${asIdentity(record.meetingReason)}. 그 사람은 모르는 일을 아는 척하지 않았고, 맡은 약속은 작은 것이라도 지켰습니다.`, `반대로 ${record.pressureSource}처럼 말과 행동이 다른 사람에게는 작은 어긋남도 오래 기억했습니다.`] },
@@ -245,7 +246,7 @@ function createCanonDeepDive(
       };
     case "family_bonds":
       return {
-        opening: `${context}. 어린 시절 당신은 ${record.occupationPath} 가족의 사랑을 말보다 책임과 생계로 배웠고, 그 방식은 훗날 가까운 아이를 지키려 할 때 다시 나타났습니다.`,
+        opening: `${context}. 어린 시절 당신은 가족의 사랑을 말보다 책임과 생계로 배웠습니다. ${dramaticHook} 그 사건을 겪은 뒤 보호와 통제의 경계를 보는 방식이 달라졌습니다.`,
         chapters: [
           { title: "부모에게 배운 보호", paragraphs: [`가족은 당신을 아꼈지만 위험을 막는다는 이유로 선택을 대신하곤 했습니다. 당신은 인정받기 위해 도움을 청하지 않는 아이가 되었습니다.`, `${withSubject(canon.sharedObject)} 처음으로 가족의 뜻과 다른 길을 택했을 때 가지고 나온 물건이었습니다.`] },
           { title: "사랑이라는 이름의 반복", paragraphs: [`세월이 흘러 당신은 어린 가족 또는 제자를 돌보게 됐습니다. 그 아이가 위험한 선택을 하자 이유를 듣기 전에 막아섰고, 자신이 받았던 보호를 그대로 반복했습니다.`, `${canon.turningPoint} 그 사건을 지켜본 아이는 보호받는 대신 믿어달라고 말했습니다. 그 문장에서 오래전 자신의 마음을 알아봤습니다.`] },

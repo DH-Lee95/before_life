@@ -32,6 +32,8 @@ describe("createStoryGenerationPrompt", () => {
     expect(prompt.user).toContain("[한 생애의 정본]");
     expect(prompt.user).toContain(profile.lifeCanon.turningPoint);
     expect(prompt.user).toContain(profile.lifeCanon.consequence);
+    expect(prompt.user).toContain(profile.lifeCanon.dramaticHook);
+    expect(prompt.user).toContain(profile.lifeCanon.hookKeywords.join(", "));
     expect(prompt.user).toContain("정본과 모순되는 새 가족관계나 생애 사건을 만들지 말 것");
     expect(prompt.user).toContain("주제가 마지막 날이 아니라면 말년이나 죽음으로 건너뛰지 말 것");
     expect(prompt.user).toContain("1,200~1,800자");

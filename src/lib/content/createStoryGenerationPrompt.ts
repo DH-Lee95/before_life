@@ -171,6 +171,8 @@ function createCanonBlock(profile: SoulProfile, contentType: LockedContentType |
 - 중심 욕망: ${canon.centralDesire}
 - 가장 큰 두려움: ${canon.centralFear}
 - 핵심 관계: ${canon.keyRelationship}
+- 독자를 붙잡는 핵심 사건: ${canon.dramaticHook || canon.turningPoint}
+- 이야기 긴장 키워드: ${(canon.hookKeywords ?? ["비밀", "위험한 선택", "관계의 대가"]).join(", ")}
 - 생애를 잇는 물건: ${canon.sharedObject}
 - 숨겨진 사실: ${canon.secret}
 - 중년의 전환점: ${canon.turningPoint}

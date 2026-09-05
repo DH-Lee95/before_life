@@ -15,15 +15,17 @@ describe("createLifeCanon", () => {
     expect(canon.sharedObject).toBe(scenario.signatureObject);
     expect(canon.turningPoint).toContain(scenario.pressureSource);
     expect(canon.timeline.map((item) => item.stage)).toEqual(["유년기", "청년기", "중년기", "말년기"]);
-    expect(canon.timeline[1].event).toContain("여행 동료와 가까워졌습니다");
-    expect(canon.timeline[1].event).not.toContain("여행 동료과");
+    expect(canon.timeline[1].event).toContain(`${canon.keyRelationship}와 가까워졌습니다`);
+    expect(canon.timeline[1].event).not.toContain(`${canon.keyRelationship}과 가까워졌습니다`);
   });
 
-  it("uses one concrete relationship instead of exposing an unresolved option", () => {
+  it("uses the scenario's concrete relationship instead of an archetype stock character", () => {
     const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
     const canon = createLifeCanon(scenario, "scholar", "b");
 
-    expect(canon.keyRelationship).toBe("당신의 질문을 귀찮아하지 않았던 어린 제자");
+    expect(canon.keyRelationship).toContain("상속녀");
+    expect(canon.dramaticHook).toMatch(/실종|사라/);
+    expect(canon.hookKeywords).toEqual(expect.arrayContaining(["강요된 혼인", "감금"]));
     expect(JSON.stringify(canon)).not.toContain("또는");
   });
 
@@ -41,16 +43,17 @@ describe("createLifeCanon", () => {
     expect(canon.finalDay).toContain("말하지 못한 마음과 선택이 남긴 영향");
   });
 
-  it("explains why the Scottish school herbarium matters to the expulsion conflict", () => {
+  it("builds the Scottish scholar story around a coerced disappearance", () => {
     const scenario = pastLifeScenarios.find((item) => item.id === "scholar-scotland-school")!;
     const canon = createLifeCanon(scenario, "scholar", "e");
 
-    expect(canon.turningPoint).toContain("표본첩에서도 그 아이의 이름을 지우라고");
-    expect(canon.turningPoint).toContain("직접 채집한 식물과 관찰 기록");
-    expect(canon.decisiveAction).toContain("교회 창고");
-    expect(canon.decisiveAction).toContain("계속 가르쳤습니다");
+    expect(canon.turningPoint).toContain("스스로 달아났다고 증언");
+    expect(canon.turningPoint).toContain("위조된 토지 증서");
+    expect(canon.decisiveAction).toContain("에든버러");
+    expect(canon.decisiveAction).toContain("감금 사실");
     expect(canon.consequence).toContain("교사 자리");
-    expect(canon.consequence).toContain("어린 제자");
+    expect(canon.consequence).toContain("상속녀");
+    expect(JSON.stringify(canon)).not.toMatch(/아이|학생|제자|표본첩/);
     expect(canon.timeline[2].event).not.toContain("정면으로 충돌");
     expect(canon.timeline[2].event).not.toContain("필요한 사람들");
     expect(canon.timeline[2].event).not.toContain("가장 가까운 사람");
@@ -66,6 +69,8 @@ describe("createLifeCanon", () => {
       expect(canon.turningPoint).toContain(scenario.signatureObject);
       expect(canon.decisiveAction.length).toBeGreaterThan(25);
       expect(canon.consequence.length).toBeGreaterThan(35);
+      expect(canon.dramaticHook.length).toBeGreaterThan(30);
+      expect(canon.hookKeywords.length).toBeGreaterThanOrEqual(3);
       expect(middleLife).toContain(canon.turningPoint);
       expect(middleLife).toContain(canon.decisiveAction);
       expect(middleLife).toContain(canon.consequence);

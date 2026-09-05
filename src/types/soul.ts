@@ -86,6 +86,8 @@ export type LifeCanon = {
   centralDesire: string;
   centralFear: string;
   keyRelationship: string;
+  dramaticHook: string;
+  hookKeywords: string[];
   sharedObject: string;
   secret: string;
   turningPoint: string;

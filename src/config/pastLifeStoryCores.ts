@@ -1,6 +1,9 @@
 import type { AnswerId } from "@/types/soul";
 
 export type PastLifeStoryCore = {
+  keyRelationship: string;
+  dramaticHook: string;
+  hookKeywords: string[];
   turningPoint: string;
   secret: string;
   truth: string;
@@ -11,7 +14,9 @@ export type PastLifeStoryCore = {
   consequence: string;
 };
 
-export const pastLifeStoryCores: Record<string, PastLifeStoryCore> = {
+type PastLifeStoryCoreBase = Omit<PastLifeStoryCore, "keyRelationship" | "dramaticHook" | "hookKeywords">;
+
+const storyCoreBases: Record<string, PastLifeStoryCoreBase> = {
   "pioneer-ottoman-route": {
     turningPoint: "통행세를 더 받으려 위험한 지름길을 강요한 관리가 길을 재촉했습니다. 비에 번진 천 지도에는 전날 비로 무너진 협곡과 안전한 우회로가 표시돼 있었습니다.",
     secret: "관리는 협곡이 무너진 사실을 알면서도 더 많은 통행세를 받으려고 대상에게 위험을 숨겼습니다.",
@@ -143,14 +148,14 @@ export const pastLifeStoryCores: Record<string, PastLifeStoryCore> = {
     consequence: "서원의 품삯과 필사할 방을 잃었습니다. 그러나 함께 원인을 찾던 농부와 어린 제자는 새 기록소에서 관찰을 이어갔습니다.",
   },
   "scholar-scotland-school": {
-    turningPoint: "가난한 아이를 내보내라고 요구한 토지 관리인이 식물 표본첩에서도 그 아이의 이름을 지우라고 했습니다. 학생들의 이름이 적힌 식물 표본첩에는 그 아이가 직접 채집한 식물과 관찰 기록이 여러 장 남아 있었습니다.",
-    secret: "토지 관리인은 소작료를 내지 못한 집을 압박하려고 이미 학교에서 배우고 기여한 아이의 자리까지 없애려 했습니다.",
-    truth: "그 아이가 직접 남긴 식물 관찰 기록과 토지 관리인의 이름 삭제 요구를 학생들의 부모와 교회에",
-    collectiveAlternative: "학생들의 부모와 교회에 빈 창고를 교실로 쓰고 농번기에는 수업 시간을 바꾸는 방안을 제안했습니다.",
-    formalRefusal: "아이를 내보내고 이름을 지우라는 요구를 거절한 뒤 표본첩을 학생들 앞에 그대로 펼쳐 두었습니다.",
-    newStart: "학교 교사 자리를 떠나 어린 제자와 학생들의 부모가 마련한 교회 창고에서 아이들을 계속 가르쳤습니다.",
-    restoration: "지워질 뻔한 아이의 이름과 관찰 기록을 다시 확인해 표본첩을 그 아이에게 돌려주었습니다.",
-    consequence: "토지 관리인이 지급하던 교사 자리와 정기 수입을 잃었습니다. 그러나 어린 제자와 학생들은 교회 창고의 새 교실에 남았습니다.",
+    turningPoint: "실종된 상속녀가 스스로 달아났다고 증언하라며 협박한 토지 관리인이 학교와 집을 빼앗겠다고 했습니다. 붉은 밀랍이 반쯤 뜯긴 편지에는 상속녀를 사냥 별장에 감금한 장소와 위조된 토지 증서의 서명자가 적혀 있었습니다.",
+    secret: "토지 관리인은 상속녀에게 원치 않는 혼인을 강요해 땅을 넘겨받으려고 그녀를 외딴 사냥 별장에 감금했습니다.",
+    truth: "상속녀가 감금된 장소와 위조된 토지 증서의 서명자를 마을 목사와 치안판사에게",
+    collectiveAlternative: "대장장이와 여관 주인에게 편지를 보여주고 눈보라가 걷히기 전에 사냥 별장의 뒷문으로 상속녀를 구하러 갔습니다.",
+    formalRefusal: "상속녀가 달아났다는 거짓 증언을 거절하고 붉은 밀랍 편지를 치안판사 앞에 내놓았습니다.",
+    newStart: "학교 교사 자리를 떠나 구출된 상속녀와 에든버러로 향해 위조 증서와 감금 사실을 법정에 제출했습니다.",
+    restoration: "빼앗긴 토지 증서의 원본을 찾아 상속녀의 이름과 권리를 되살리고 마을 사람들의 소작 계약도 되돌렸습니다.",
+    consequence: "토지 관리인이 지급하던 교사 자리와 살던 집을 잃었습니다. 그러나 상속녀는 강요된 혼인에서 벗어났고 두 사람은 위조된 토지 증서를 끝까지 추적했습니다.",
   },
   "steward-joseon-water": {
     turningPoint: "자기 집안 논에 먼저 물을 대라 한 마을 유력자가 정해진 물길 순서를 바꾸라고 압박했습니다. 농가별 물 순서를 새긴 나무패에는 아래쪽 논부터 물을 보내야 둑이 마르지 않는다는 합의가 남아 있었습니다.",
@@ -213,6 +218,119 @@ export const pastLifeStoryCores: Record<string, PastLifeStoryCore> = {
     consequence: "건축업자의 설계 일과 제재소 재료 할인을 잃었습니다. 하지만 첫 도면을 믿어준 가족과 목수들은 새 작업팀의 집을 함께 지었습니다.",
   },
 };
+
+type DramaticStoryHook = Pick<PastLifeStoryCore, "keyRelationship" | "dramaticHook" | "hookKeywords">;
+
+const dramaticStoryHooks: Record<string, DramaticStoryHook> = {
+  "pioneer-ottoman-route": {
+    keyRelationship: "목숨을 맡기고 금지된 우회로를 택한 젊은 상단주",
+    dramaticHook: "폭우로 협곡이 무너진 다음 날, 통행세를 챙긴 관리는 수십 명의 대상을 그 죽음의 길로 밀어 넣으려 했습니다.",
+    hookKeywords: ["무너진 협곡", "배신한 관리", "숨겨진 우회로", "목숨을 건 탈출"],
+  },
+  "pioneer-brazil-post": {
+    keyRelationship: "마지막 편지를 함께 배달한 세 언어 통역자",
+    dramaticHook: "반송될 우편가방 안에는 죽은 줄 알았던 가족의 편지와 누군가 일부러 지운 정착촌의 위치가 함께 들어 있었습니다.",
+    hookKeywords: ["사라진 정착촌", "죽은 줄 알았던 가족", "마지막 편지", "봉쇄된 길"],
+  },
+  "chronicler-ming-letters": {
+    keyRelationship: "사라진 원문을 되찾아 달라던 몰락한 상인의 딸",
+    dramaticHook: "답장이 오지 않은 편지 한 장은 거대한 상단이 한 집안을 파산시키고도 약속을 지웠다는 유일한 증거였습니다.",
+    hookKeywords: ["사라진 원문", "조작된 거래", "몰락한 가문", "위험한 증언"],
+  },
+  "chronicler-jeonju-letters": {
+    keyRelationship: "학대받는 누이를 되찾으려 편지를 맡긴 오라비",
+    dramaticHook: "불태우라는 쪽빛 편지에는 시집간 여자가 목숨을 걸고 보낸 구조 요청과 집안이 감춘 폭력이 적혀 있었습니다.",
+    hookKeywords: ["불태울 편지", "금지된 구조 요청", "가문의 비밀", "목숨을 건 귀환"],
+  },
+  "caretaker-andalusia-herbs": {
+    keyRelationship: "금지된 환자를 한밤중에 데려온 목욕탕 관리인",
+    dramaticHook: "성문이 닫힌 밤, 돈이 없는 환자가 쓰러졌습니다. 약재 공급상은 이미 값을 치른 공동 약병까지 빼앗아 목숨을 흥정하려 했습니다.",
+    hookKeywords: ["빼앗긴 약병", "금지된 치료", "한밤의 거래", "목숨을 건 선택"],
+  },
+  "caretaker-jeju-clinic": {
+    keyRelationship: "명단에서 지워진 이주민을 찾던 젊은 의사",
+    dramaticHook: "폭풍 뒤 포구로 밀려든 이주민들의 이름이 환자 명단에서 통째로 사라졌고, 약이 필요한 사람들은 존재하지 않는 사람 취급을 받았습니다.",
+    hookKeywords: ["지워진 이주민", "폭풍의 밤", "숨겨진 명단", "위험한 왕진"],
+  },
+  "artisan-italy-instruments": {
+    keyRelationship: "도난당한 악기의 진짜 소리를 기억한 떠돌이 연주자",
+    dramaticHook: "도시 최고의 악기는 스승의 작품으로 발표됐지만, 악기 안쪽의 별 하나가 당신의 이름과 도둑맞은 시간을 증명했습니다.",
+    hookKeywords: ["도둑맞은 작품", "가짜 거장", "숨겨진 표식", "금지된 연주"],
+  },
+  "artisan-venice-glass": {
+    keyRelationship: "깨진 혼례 잔에 숨은 비밀을 맡긴 귀족가의 하녀",
+    dramaticHook: "혼례 전날 푸른 잔이 산산이 갈라졌습니다. 공방주는 같은 불량 유리로 만든 잔 수백 개를 귀족가에 넘기고 당신에게 침묵을 명령했습니다.",
+    hookKeywords: ["깨진 혼례 잔", "불량 유리", "공방주의 협박", "숨겨진 균열"],
+  },
+  "merchant-india-spice": {
+    keyRelationship: "동업자의 사재기를 먼저 의심한 젊은 상인",
+    dramaticHook: "도시가 굶기 시작한 날, 가장 믿었던 동업자의 비밀 창고에서 사라진 향신료 자루와 이중 장부가 발견됐습니다.",
+    hookKeywords: ["비밀 창고", "배신한 동업자", "이중 장부", "도시의 굶주림"],
+  },
+  "merchant-dutch-textile": {
+    keyRelationship: "가족 공방의 마지막 천을 맡긴 젊은 염색 장인",
+    dramaticHook: "침수된 창고를 봉인한 밤, 큰 상인은 곰팡이 핀 직물을 몰래 바꿔치기해 작은 공방들을 파산시키려 했습니다.",
+    hookKeywords: ["봉인된 창고", "상품 바꿔치기", "몰락 직전의 공방", "위조 계약"],
+  },
+  "wayfinder-baltic-harbor": {
+    keyRelationship: "거짓 신호를 의심하고 배를 멈춘 외국인 선장",
+    dramaticHook: "짙은 안개와 썰물이 겹친 밤, 선주는 화물 도착일을 맞추려고 승객을 태운 배를 암초 사이로 끌어들이라 명령했습니다.",
+    hookKeywords: ["암초의 밤", "숨겨진 항로표", "배신한 선주", "목숨을 건 귀환"],
+  },
+  "wayfinder-canada-weather": {
+    keyRelationship: "실종된 오빠의 마지막 무전을 추적한 무선 기사",
+    dramaticHook: "바다에 나간 배가 급격한 기압 하락을 알렸지만, 선단주는 어획 계약을 지키려고 마지막 귀환 무전을 없던 일로 만들었습니다.",
+    hookKeywords: ["마지막 귀환 무전", "다가오는 폭풍", "봉쇄된 경고", "목숨을 건 구조"],
+  },
+  "scholar-qing-botany": {
+    keyRelationship: "금지된 재배 기록을 숨겨 온 차 농가의 후계자",
+    dramaticHook: "마을의 차밭이 검게 죽어가던 계절, 금지된 기록 한 권은 재앙이 실수가 아니라 서원의 실험에서 시작됐음을 밝혔습니다.",
+    hookKeywords: ["금지된 기록", "실패한 실험", "조작된 책임", "몰락하는 차밭"],
+  },
+  "scholar-scotland-school": {
+    keyRelationship: "당신에게 마지막 편지를 맡기고 사라진 저택의 상속녀",
+    dramaticHook: "강요된 혼인을 사흘 앞둔 밤, 저택의 상속녀가 붉은 밀랍 편지를 남기고 실종됐습니다. 다음 날 토지 관리인은 당신에게 거짓 증언을 요구했습니다.",
+    hookKeywords: ["강요된 혼인", "감금", "위조된 토지 증서", "실종된 상속녀"],
+  },
+  "steward-joseon-water": {
+    keyRelationship: "밤마다 막힌 수문을 함께 조사한 과부 농부",
+    dramaticHook: "모내기를 앞둔 밤마다 아래쪽 논의 물이 사라졌고, 수문에는 마을 유력자의 집으로만 이어지는 비밀 물길이 나 있었습니다.",
+    hookKeywords: ["비밀 수로", "빼앗긴 물", "유력자의 협박", "밤의 추적"],
+  },
+  "steward-greece-olive": {
+    keyRelationship: "배급 장부에서 가족 이름이 지워진 귀환병",
+    dramaticHook: "전쟁에서 돌아온 가족들의 이름이 배급 장부에서 사라진 밤, 조합 간부는 봉인된 비축분을 몰래 팔아넘기려 했습니다.",
+    hookKeywords: ["지워진 가족", "봉인된 비축분", "전쟁 귀환자", "조합의 배신"],
+  },
+  "performer-france-puppets": {
+    keyRelationship: "세금 때문에 가게를 잃고 가면을 만들던 장터 상인",
+    dramaticHook: "금지된 인형극이 시작되자 객석 맨 앞의 관리가 칼을 뽑았고, 웃는 인형 속에서는 그가 숨긴 세금 명단이 펼쳐졌습니다.",
+    hookKeywords: ["금지된 공연", "숨겨진 세금 명단", "가면 쓴 저항", "도시의 추격"],
+  },
+  "performer-shanghai-cinema": {
+    keyRelationship: "잘린 필름의 원본을 숨긴 무성영화관 영사 기사",
+    dramaticHook: "관객이 모두 울던 마지막 장면이 어느 날 필름에서 잘려 나갔습니다. 극장주는 돈이 되지 않는 슬픔이라며 악보까지 없애라고 명령했습니다.",
+    hookKeywords: ["잘린 마지막 장면", "사라진 악보", "극장주의 협박", "비밀 상영"],
+  },
+  "visionary-egypt-telegraph": {
+    keyRelationship: "조작된 전보를 처음 발견한 철도 통신원",
+    dramaticHook: "항구가 물에 잠기기 직전 도착한 경고 전보는 두 번 조작됐고, 상선에 탄 사람들은 자신들이 버려졌다는 사실조차 몰랐습니다.",
+    hookKeywords: ["조작된 전보", "침수되는 항구", "버려진 상선", "마지막 경고"],
+  },
+  "visionary-finland-housing": {
+    keyRelationship: "불탄 집에서 유일한 도면을 구해낸 젊은 목수",
+    dramaticHook: "첫눈이 내리기 전 새집 한 채가 불탔고, 잿더미에서 발견된 도면은 건축업자가 안전 계산을 몰래 지웠음을 보여줬습니다.",
+    hookKeywords: ["불탄 집", "삭제된 안전 계산", "도난당한 설계", "겨울 전의 추적"],
+  },
+};
+
+export const pastLifeStoryCores = Object.fromEntries(
+  Object.entries(storyCoreBases).map(([scenarioId, core]) => {
+    const hook = dramaticStoryHooks[scenarioId];
+    if (!hook) throw new Error(`극적 이야기 설정이 없습니다: ${scenarioId}`);
+    return [scenarioId, { ...hook, ...core }];
+  }),
+) as Record<string, PastLifeStoryCore>;
 
 export function createScenarioAction(core: PastLifeStoryCore, answerId: AnswerId, keyRelationship: string): string {
   const actions: Record<AnswerId, string> = {

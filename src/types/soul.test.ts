@@ -24,7 +24,8 @@ describe("soul types", () => {
   it("defines a shared life canon for every story", () => {
     const canon: LifeCanon = {
       scenarioId: "chronicler-jeonju-books", centralDesire: "진실을 남기는 것", centralFear: "한 사람의 목소리가 지워지는 것",
-      keyRelationship: "답장을 기다리던 책방 손님", sharedObject: "쪽빛 봉투", secret: "편지가 숨겨졌다는 사실",
+      keyRelationship: "답장을 기다리던 책방 손님", dramaticHook: "불태우라는 편지에 한 사람을 구할 마지막 요청이 적혀 있었습니다.",
+      hookKeywords: ["금지된 편지", "숨겨진 구조 요청", "가문의 비밀"], sharedObject: "쪽빛 봉투", secret: "편지가 숨겨졌다는 사실",
       turningPoint: "사라질 편지를 직접 돌려준 밤", decisiveAction: "가문의 요구를 거절했습니다.", consequence: "책방 일을 잃었습니다.",
       legacy: "사라질 이름을 기록으로 남겼습니다.", finalDay: "마지막 편지를 원래 주인에게 보냈습니다.", historicalTerms: ["장시"],
       timeline: [
